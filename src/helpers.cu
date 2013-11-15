@@ -195,8 +195,19 @@ __global__ void raycastInput( Image<float3> pos3D, Image<float3> normal, Image<f
     }
 }
 
-
 void renderInput( Image<float3> pos3D, Image<float3> normal, Image<float> depth, const Volume volume, const Matrix4 view, const float nearPlane, const float farPlane, const float step, const float largestep){
     dim3 block(16,16);
     raycastInput<<<divup(pos3D.size, block), block>>>(pos3D, normal, depth, volume, view, nearPlane, farPlane, step, largestep);
+}
+
+__global__ void renderFusedKernel(Image<uint16_t> out, const Image<float3> vertex) {
+	const uint2 pos = thr2pos2();
+	float f = vertex[pos].z;
+	out[pos] = uint16_t (f * 1000);
+	__syncthreads();
+}
+
+void renderFusedMap(Image<uint16_t> out, const Image<float3> & vertex) {
+	dim3 block(16,16);
+	renderFusedKernel<<<divup(out.size, block), block>>>(out, vertex);
 }

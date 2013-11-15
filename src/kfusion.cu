@@ -23,14 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "kfusion.h"
 
-#undef isnan
-#undef isfinite
-
 #include <iostream>
-
-#include <TooN/TooN.h>
-#include <TooN/se3.h>
-#include <TooN/GR_SVD.h>
 
 #define INVALID -2   // this is used to mark invalid entries in normal or vertex maps
 

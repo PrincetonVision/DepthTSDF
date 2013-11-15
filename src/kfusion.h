@@ -33,16 +33,19 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
    #include <limits.h>
 #endif
 
-/*============================================================================*/
-#define SUN3D
-/*============================================================================*/
-
 #include <stdint.h>
 #include <iostream>
 #include <vector>
 
 #include <vector_types.h>
 #include <vector_functions.h>
+
+#undef isnan
+#undef isfinite
+
+#include <TooN/TooN.h>
+#include <TooN/se3.h>
+#include <TooN/GR_SVD.h>
 
 #include "cutil_math.h"
 
@@ -94,17 +97,11 @@ struct KFusionConfig {
         delta = 4.0f;
         e_delta = 0.1f;
 
-#ifdef SUN3D
-        dist_threshold = 0.1f;
-        normal_threshold = 0.8f;
-        track_threshold = 0.50f;
-        rsme_threshold = 2e-2f;
-#else
         dist_threshold = 0.1f;
         normal_threshold = 0.8f;
         track_threshold = 0.15f;
         rsme_threshold = 2e-2f;
-#endif
+
         iterations.push_back( 5 );
         iterations.push_back( 5 );
         iterations.push_back( 5 );
@@ -122,6 +119,20 @@ struct Matrix4 {
 
     inline __host__ __device__ float3 get_translation() const {
         return make_float3(data[0].w, data[1].w, data[2].w);
+    }
+
+    inline __host__ __device__ TooN::Matrix<3,3,float> get_rotation() const {
+    	TooN::Matrix<3,3,float> R;
+    	R(0,0) = data[0].x;
+    	R(0,1) = data[0].y;
+    	R(0,2) = data[0].z;
+    	R(1,0) = data[1].x;
+    	R(1,1) = data[1].y;
+    	R(1,2) = data[1].z;
+    	R(2,0) = data[2].x;
+    	R(2,1) = data[2].y;
+    	R(2,2) = data[2].z;
+    	return R;
     }
 };
 
