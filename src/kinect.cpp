@@ -82,7 +82,7 @@ Image<uint16_t, HostDevice> fusedDepth;
 ///////////////////////////////////////////////
 // global parameter
 
-int   param_start_index = 300;
+int   param_start_index = 0;
 
 int   param_volume_size = 512;			// 715 is maximum
 float param_volume_dimension = 8.f;
@@ -110,12 +110,15 @@ const int kImageChannels = 3;
 
 vector<string> image_list;
 vector<string> depth_list;
+vector<string> extrinsic_list;
+vector<Matrix4> extrinsic_poses;
 
 string data_dir = "/home/alan/DATA/SUN3D/hotel_umd/maryland_hotel3/";
 string intrinsic = data_dir + "intrinsics.txt";
 string image_dir = data_dir + "image/";
 string depth_dir = data_dir + "depth/";
 string fused_dir = data_dir + "fused/";
+string extrinsic_dir = data_dir + "extrinsics/";
 
 void GetFileNames(const string dir, vector<string> *file_list) {
   DIR *dp;
@@ -160,8 +163,6 @@ void SaveImprovedDepthFile() {
 	png::image<png::gray_pixel_16> img(kImageCols, kImageRows);
 	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex);
 
-	usleep(1000 * 100); // time delay
-
 	for (int i = 0; i < kImageRows; ++i) {
 		for (int j = 0; j < kImageCols; ++j) {
 			uint16_t s = fusedDepth[make_uint2(j,i)];
@@ -172,6 +173,25 @@ void SaveImprovedDepthFile() {
 	}
 
 	img.write(fused_full_name.c_str());
+}
+
+bool GetExtrinsicData(string file_name, vector<Matrix4> *poses) {
+	FILE *fp = fopen(file_name.c_str(), "r");
+	for (int i = 0; i < image_list.size(); ++i) {
+		Matrix4 m;
+		for (int d = 0; d < 3; ++d) {
+			int iret;
+			iret = fscanf(fp, "%f", &m.data[d].x);
+			iret = fscanf(fp, "%f", &m.data[d].y);
+			iret = fscanf(fp, "%f", &m.data[d].z);
+			iret = fscanf(fp, "%f", &m.data[d].w);
+		}
+		m.data[3].x = m.data[3].y = m.data[3].z = 0.f;
+		m.data[3].w = 1.f;
+
+//		cout << m << endl;
+		poses->push_back(m);
+	}
 }
 
 bool GetImageData(string file_name, unsigned char *data) {
@@ -246,6 +266,18 @@ void display(void){
             cout << "==== REVERSE: file_index ====" << endl;
             return;
     	}
+
+    	// T_12 = T_01^(-1) * T_02
+    	// T_02 = T_01 * T_12;
+
+    	if (file_index > 0) {
+        	cout << kfusion.pose << endl;
+    		Matrix4 delta = inverse(extrinsic_poses[file_index - 1]) * extrinsic_poses[file_index];
+    		cout << delta << endl;
+    		kfusion.pose = kfusion.pose * delta;
+        	cout << kfusion.pose << endl;
+        	exit(0);
+    	}
     } else {
     	if (file_index == param_start_index - param_frame_threshold ||
     			file_index == -1) {
@@ -259,6 +291,11 @@ void display(void){
             cout << "==== FINISH: file_index ====" << endl;
     		exit(0);
     	}
+
+//    	if (file_index < image_list.size() - 1) {
+//    		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
+//    		kfusion.pose = kfusion.pose * delta;
+//    	}
     }
 
     cout << file_index << endl;
@@ -346,11 +383,11 @@ void display(void){
 #ifdef SUN3D
 /*============================================================================*/
       float3 xyz = kfusion.pose.get_translation();
-      cout << xyz.x << " " << xyz.y << " " << xyz.z << endl;
+//      cout << xyz.x << " " << xyz.y << " " << xyz.z << endl;
       float3 direction = kfusion.pose * make_float3(0, 0, 1) - xyz;
       double angle = atan2(direction.x, direction.z);
-      cout << angle << endl;
-      cout << direction.x << " " << direction.y << " " << direction.z <<  endl;
+//      cout << angle << endl;
+//      cout << direction.x << " " << direction.y << " " << direction.z <<  endl;
       rot = SE3<float>(makeVector(0, 0, 0, 0, angle, 0));
 
       renderInput( pos, normals, dep, kfusion.integration,
@@ -388,7 +425,7 @@ void display(void){
     glRasterPos2i(kImageCols,kImageRows);
     glDrawPixels(trackModel);
     glRasterPos2i(kImageCols * 2, 0);
-//    glPixelZoom(2, -2);
+    glPixelZoom(2, -2);
     glDrawPixels(texModel);
     const double endProcessing = Stats.sample("draw");
 
@@ -400,11 +437,11 @@ void display(void){
 
     ++counter;
 
-    if(counter % 50 == 0){
-        Stats.print();
-        Stats.reset();
-        cout << endl;
-    }
+//    if(counter % 50 == 0){
+//        Stats.print();
+//        Stats.reset();
+//        cout << endl;
+//    }
 
     glutSwapBuffers();
 
@@ -484,6 +521,9 @@ int main(int argc, char ** argv) {
 
     GetFileNames(image_dir, &image_list);
     GetFileNames(depth_dir, &depth_list);
+    GetFileNames(extrinsic_dir, &extrinsic_list);
+    assert(extrinsic_list.size() == 1);
+    GetExtrinsicData(extrinsic_list[0], &extrinsic_poses);
 
     int i_ret;
     float fx, fy, cx, cy, ff;

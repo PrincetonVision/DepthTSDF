@@ -204,10 +204,10 @@ __global__ void renderFusedKernel(Image<uint16_t> out, const Image<float3> verte
 	const uint2 pos = thr2pos2();
 	float f = vertex[pos].z;
 	out[pos] = uint16_t (f * 1000);
-	__syncthreads();
 }
 
 void renderFusedMap(Image<uint16_t> out, const Image<float3> & vertex) {
 	dim3 block(16,16);
 	renderFusedKernel<<<divup(out.size, block), block>>>(out, vertex);
+	cudaDeviceSynchronize();
 }
