@@ -27,11 +27,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "perfstats.h"
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <cstring>
 #include <dirent.h>
 #include <cerrno>
+#include <cmath>
 
 #include <png++/png.hpp>
 #include <jpeglib.h>
@@ -47,6 +49,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /*============================================================================*/
 #define SUN3D
+//#define RENDER_SCENE
+#define LOCAL_RUN
 /*============================================================================*/
 
 using namespace std;
@@ -79,10 +83,10 @@ bool redraw_big_view = false;
 
 Image<uint16_t, HostDevice> fusedDepth;
 
-///////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // global parameter
 
-int   param_start_index = 0;
+int   param_start_index = 1866;
 
 int   param_volume_size = 512;			// 715 is maximum
 float param_volume_dimension = 8.f;
@@ -99,7 +103,7 @@ KinfuMode param_mode = KINFU_FORWARD;
 
 // voxel resolution: 0.01 meter
 
-///////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 int file_index;
 float angle_threshold, translation_threshold;
@@ -112,13 +116,26 @@ vector<string> image_list;
 vector<string> depth_list;
 vector<string> extrinsic_list;
 vector<Matrix4> extrinsic_poses;
+map<int, Matrix4> pose_map;
 
+#ifdef LOCAL_RUN
 string data_dir = "/home/alan/DATA/SUN3D/hotel_umd/maryland_hotel3/";
+string tsdf_dir = data_dir;
+#else
+string data_dir = "/n/fs/sun3d/data/scene/scene_final/hotel_umd/maryland_hotel3/";
+string tsdf_dir = "/n/fs/sun3d/data/sfm/hotel_umd/maryland_hotel3/";
+#endif
+
 string intrinsic = data_dir + "intrinsics.txt";
 string image_dir = data_dir + "image/";
 string depth_dir = data_dir + "depth/";
-string fused_dir = data_dir + "fused/";
+string fused_dir = data_dir + "depthTSDF/";
 string extrinsic_dir = data_dir + "extrinsics/";
+
+string frame_dir = tsdf_dir + "frameTSDF/";
+string pose_dir  = tsdf_dir + "poseTSDF/";
+
+////////////////////////////////////////////////////////////////////////////////
 
 void GetFileNames(const string dir, vector<string> *file_list) {
   DIR *dp;
@@ -137,6 +154,8 @@ void GetFileNames(const string dir, vector<string> *file_list) {
   file_list->erase(file_list->begin()); //..
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 bool GetDepthData(string file_name, uint16_t *data) {
   png::image< png::gray_pixel_16 > img(file_name.c_str(),
       png::require_color_space< png::gray_pixel_16 >());
@@ -145,8 +164,8 @@ bool GetDepthData(string file_name, uint16_t *data) {
   for (int i = 0; i < kImageRows; ++i) {
     for (int j = 0; j < kImageCols; ++j) {
       uint16_t s = img.get_pixel(j, i);
-//      *(data + index) = (s >> 3);
       *(data + index) = (s << 13 | s >> 3);
+//      *(data + index) = (s >> 3);
       ++index;
     }
   }
@@ -154,7 +173,9 @@ bool GetDepthData(string file_name, uint16_t *data) {
   return true;
 }
 
-void SaveImprovedDepthFile() {
+////////////////////////////////////////////////////////////////////////////////
+
+void SaveFusedDepthFile() {
 	string depth_full_name = depth_list[param_start_index];
 	string depth_serial_name = depth_full_name.substr(
 			depth_full_name.size() - param_file_name_length, param_file_name_length);
@@ -167,13 +188,36 @@ void SaveImprovedDepthFile() {
 		for (int j = 0; j < kImageCols; ++j) {
 			uint16_t s = fusedDepth[make_uint2(j,i)];
 			img[i][j] = (s >> 13 | s << 3);
-//			cout << (s >> 13 | s << 3) << " ";
 //			img[i][j] = (s << 3);
 		}
 	}
 
 	img.write(fused_full_name.c_str());
+
+	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) + ".txt";
+	string pose_txt_name  = pose_dir  + serial_txt;
+	string frame_txt_name = frame_dir + serial_txt;
+
+	FILE *fp_frame = fopen(frame_txt_name.c_str(), "w");
+	ofstream pose_file;
+	pose_file.open(pose_txt_name.c_str());
+	pose_file.precision(60);
+
+	for (map<int, Matrix4>::iterator it = pose_map.begin(); it != pose_map.end(); ++it) {
+		fprintf(fp_frame, "%d\n", it->first);
+		Matrix4 m = it->second;
+		for (int i = 0; i < 3; ++i) {
+			pose_file << m.data[i].x << "\t";
+			pose_file << m.data[i].y << "\t";
+			pose_file << m.data[i].z << "\t";
+			pose_file << m.data[i].w << "\n";
+		}
+	}
+	fclose(fp_frame);
+	pose_file.close();
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 bool GetExtrinsicData(string file_name, vector<Matrix4> *poses) {
 	FILE *fp = fopen(file_name.c_str(), "r");
@@ -188,11 +232,13 @@ bool GetExtrinsicData(string file_name, vector<Matrix4> *poses) {
 		}
 		m.data[3].x = m.data[3].y = m.data[3].z = 0.f;
 		m.data[3].w = 1.f;
-
-//		cout << m << endl;
 		poses->push_back(m);
 	}
+
+	return true;
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 bool GetImageData(string file_name, unsigned char *data) {
   unsigned char *raw_image = NULL;
@@ -250,6 +296,7 @@ void display(void){
     static bool integrate = true;
 
 /*============================================================================*/
+
 #ifdef SUN3D
 
     if (param_mode == KINFU_FORWARD) {
@@ -258,25 +305,21 @@ void display(void){
             kfusion.Integrate();
 
             param_mode = KINFU_BACKWARD;
-            file_index = param_start_index;
+            file_index = param_start_index - 1;
             kfusion.setPose(toMatrix4(initPose));
 
             kfusion.Raycast();
 
-            cout << "==== REVERSE: file_index ====" << endl;
+            cout << "IDX" << endl << endl;
             return;
     	}
 
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
 
-    	if (file_index > 0) {
-        	cout << kfusion.pose << endl;
+    	if (file_index > 0 && file_index != param_start_index) {
     		Matrix4 delta = inverse(extrinsic_poses[file_index - 1]) * extrinsic_poses[file_index];
-    		cout << delta << endl;
     		kfusion.pose = kfusion.pose * delta;
-        	cout << kfusion.pose << endl;
-        	exit(0);
     	}
     } else {
     	if (file_index == param_start_index - param_frame_threshold ||
@@ -286,21 +329,22 @@ void display(void){
     		kfusion.setPose(toMatrix4(initPose));
 
     		kfusion.Raycast();
-    		SaveImprovedDepthFile();
+    		SaveFusedDepthFile();
 
-            cout << "==== FINISH: file_index ====" << endl;
+            cout << "IDX" << endl << endl;
     		exit(0);
     	}
 
-//    	if (file_index < image_list.size() - 1) {
-//    		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
-//    		kfusion.pose = kfusion.pose * delta;
-//    	}
+		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
+		kfusion.pose = kfusion.pose * delta;
     }
 
-    cout << file_index << endl;
+    cout << file_index << " ";
+    cout.flush();
 
+#ifdef RENDER_SCENE
     GetImageData(image_list[file_index], (unsigned char *)rgbImage.data());
+#endif
     GetDepthData(depth_list[file_index], (uint16_t *)depthImage[0].data());
 
     glClear( GL_COLOR_BUFFER_BIT );
@@ -323,31 +367,45 @@ void display(void){
     integrate = kfusion.Track();
     Stats.sample("track");
 
-    Matrix<3,3,float> R = kfusion.pose.get_rotation();
-    Vector<3, float> curr_w = SO3<float>(R).ln();
-    float3 temp_t = kfusion.pose.get_translation();
-    Vector<3, float> curr_t;
-    curr_t[0] = temp_t.x;
-    curr_t[1] = temp_t.y;
-    curr_t[2] = temp_t.z;
-    Vector<3, float> init_t = initPose.get_translation();
-    Vector<3, float> diff_t = curr_t - init_t;
+#ifdef SUN3D
+/*============================================================================*/
+    pose_map.insert(make_pair(file_index, kfusion.pose));
+
+    double z_angle;
+    Vector<3, float> diff_t;
+    diff_t[0] = diff_t[1] = diff_t[2] = 0.f;
+
+    if (file_index != param_start_index) {
+    	float3 cam_z;
+    	cam_z.x = cam_z.y = 0.f;
+    	cam_z.z = 1.f;
+    	float3 wor_z = kfusion.pose * cam_z;
+    	z_angle = acos(wor_z.z);
+
+		float3 temp_t = kfusion.pose.get_translation();
+		Vector<3, float> curr_t;
+		curr_t[0] = temp_t.x;
+		curr_t[1] = temp_t.y;
+		curr_t[2] = temp_t.z;
+		Vector<3, float> init_t = initPose.get_translation();
+		diff_t = curr_t - init_t;
+    }
 
 //    cout << "curr_w, diff_t: " << curr_w << "\t" << diff_t << endl;
 
     if ((!integrate && file_index != param_start_index) ||
-    		norm(curr_w) > angle_threshold * param_angle_factor ||
+    		z_angle > angle_threshold * param_angle_factor ||
     		norm(diff_t) > translation_threshold * param_translation_factor ) {
 		if (param_mode == KINFU_FORWARD) {
 			kfusion.Integrate();
 
 			param_mode = KINFU_BACKWARD;
-			file_index = param_start_index;
+			file_index = param_start_index - 1;
 			kfusion.setPose(toMatrix4(initPose));
 
 			kfusion.Raycast();
 
-			cout << "==== REVERSE: threshold ====" << endl;
+			cout << "THR" << endl << endl;
 			return;
 		} else {
 			kfusion.Integrate();
@@ -355,9 +413,9 @@ void display(void){
 			kfusion.setPose(toMatrix4(initPose));
 
 			kfusion.Raycast();
-			SaveImprovedDepthFile();
+			SaveFusedDepthFile();
 
-            cout << "==== FINISH: threshold ====" << endl;
+            cout << "THR" << endl << endl;
 			exit(0);
 		}
     }
@@ -366,6 +424,8 @@ void display(void){
     	++file_index;
     else
     	--file_index;
+/*----------------------------------------------------------------------------*/
+#endif
 
     if((should_integrate && integrate && ((counter % integration_rate) == 0)) || reset){
         kfusion.Integrate();
@@ -375,6 +435,7 @@ void display(void){
             reset = false;
     }
 
+#ifdef RENDER_SCENE
 	renderLight( lightScene.getDeviceImage(), kfusion.inputVertex[0], kfusion.inputNormal[0], light, ambient );
     renderLight( lightModel.getDeviceImage(), kfusion.vertex, kfusion.normal, light, ambient);
     renderTrackResult(trackModel.getDeviceImage(), kfusion.reduction);
@@ -383,16 +444,11 @@ void display(void){
 #ifdef SUN3D
 /*============================================================================*/
       float3 xyz = kfusion.pose.get_translation();
-//      cout << xyz.x << " " << xyz.y << " " << xyz.z << endl;
       float3 direction = kfusion.pose * make_float3(0, 0, 1) - xyz;
       double angle = atan2(direction.x, direction.z);
-//      cout << angle << endl;
-//      cout << direction.x << " " << direction.y << " " << direction.z <<  endl;
       rot = SE3<float>(makeVector(0, 0, 0, 0, angle, 0));
 
       renderInput( pos, normals, dep, kfusion.integration,
-//          toMatrix4( rot * SE3<float>::exp(makeVector(xyz.x, xyz.y, xyz.z, 0, 0, 0)) ) * getInverseCameraMatrix(kfusion.configuration.camera * 2),
-//          toMatrix4( SE3<float>(makeVector(size/2, size/2, 2, 0, 0, 0)) * rot ) * getInverseCameraMatrix(kfusion.configuration.camera * 2),
           toMatrix4( trans * rot * preTrans ) * getInverseCameraMatrix(kfusion.configuration.camera),
           kfusion.configuration.nearPlane,
           kfusion.configuration.farPlane,
@@ -410,10 +466,13 @@ void display(void){
         renderTexture( texModel.getDeviceImage(), pos, normals, rgbImage.getDeviceImage(), getCameraMatrix(2*kfusion.configuration.camera) * inverse(kfusion.pose), light);
     else
         renderLight( texModel.getDeviceImage(), pos, normals, light, ambient);
+#endif
+
     cudaDeviceSynchronize();
 
     Stats.sample("render");
 
+#ifdef RENDER_SCENE
     glClear(GL_COLOR_BUFFER_BIT);
     glRasterPos2i(0, 0);
     glDrawPixels(lightScene);
@@ -427,6 +486,8 @@ void display(void){
     glRasterPos2i(kImageCols * 2, 0);
     glPixelZoom(2, -2);
     glDrawPixels(texModel);
+#endif
+
     const double endProcessing = Stats.sample("draw");
 
     Stats.sample("total", endProcessing - startFrame, PerfStats::TIME);
@@ -443,7 +504,9 @@ void display(void){
 //        cout << endl;
 //    }
 
+#ifdef RENDER_SCENE
     glutSwapBuffers();
+#endif
 
 //    usleep(1000 * 500);
 }
@@ -515,15 +578,16 @@ void exitFunc(void){
 int main(int argc, char ** argv) {
 #ifdef SUN3D
 /*============================================================================*/
-    size = (argc > 1) ? atof(argv[1]) : param_volume_dimension;
+	cout << "=================================================================" << endl;
+	param_start_index = (argc > 1) ? atoi(argv[1]) : param_start_index;
+	file_index = param_start_index;
 
-    file_index = param_start_index;
+    size = param_volume_dimension;
 
     GetFileNames(image_dir, &image_list);
     GetFileNames(depth_dir, &depth_list);
     GetFileNames(extrinsic_dir, &extrinsic_list);
-    assert(extrinsic_list.size() == 1);
-    GetExtrinsicData(extrinsic_list[0], &extrinsic_poses);
+    GetExtrinsicData(extrinsic_list[extrinsic_list.size() - 1], &extrinsic_poses);
 
     int i_ret;
     float fx, fy, cx, cy, ff;
@@ -559,10 +623,13 @@ int main(int argc, char ** argv) {
 
     // change the following parameters for using 640 x 480 input images
     config.inputSize = make_uint2(kImageCols, kImageRows);
+
 #ifdef SUN3D
     float factor = 1.0f;
     config.camera =  make_float4(fx / factor, fy / factor, cx / factor, cy / factor);
+
     config.rsme_threshold = param_rsme_threshold;
+//    config.track_threshold = 0.7f;
 #else
     config.camera =  make_float4(531.15/2, 531.15/2, 640/4, 480/4);
 #endif
@@ -572,19 +639,18 @@ int main(int argc, char ** argv) {
     config.iterations[0] = 10;
     config.iterations[1] = 5;
     config.iterations[2] = 4;
-//    config.iterations[0] = 30;
-//    config.iterations[1] = 20;
-//    config.iterations[2] = 10;
 
     config.dist_threshold = (argc > 2 ) ? atof(argv[2]) : config.dist_threshold;
     config.normal_threshold = (argc > 3 ) ? atof(argv[3]) : config.normal_threshold;
 
     initPose = SE3<float>(makeVector(size/2, size/2, 2, 0, 0, 0));
 
+#ifdef RENDER_SCENE
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE );
     glutInitWindowSize(config.inputSize.x * 2 + 640 * 2, max(config.inputSize.y * 2, 480 * 2));
     glutCreateWindow("kfusion");
+#endif
 
     kfusion.Init(config);
 
@@ -627,6 +693,7 @@ int main(int argc, char ** argv) {
     trans = SE3<float>::exp(makeVector(0.5, 0.5, 0.5, 0, 0, 0) * size);
 #endif
 
+#ifdef RENDER_SCENE
     atexit(exitFunc);
     glutDisplayFunc(display);
     glutKeyboardFunc(keys);
@@ -635,6 +702,12 @@ int main(int argc, char ** argv) {
     glutIdleFunc(idle);
 
     glutMainLoop();
+#else
+
+    while(1)
+    	display();
+
+#endif
 
 #ifndef SUN3D
     CloseKinect();

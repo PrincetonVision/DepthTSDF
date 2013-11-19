@@ -554,7 +554,8 @@ bool KFusion::Track() {
                 values[0] += values[j];
             TooN::Vector<6> x = solve(values[0].slice<1,27>());
             TooN::SE3<> delta(x);
-            pose = toMatrix4( delta ) * pose;
+//            pose = toMatrix4( delta ) * pose;	// original
+            pose = pose * toMatrix4( delta );
             if(norm(x) < 1e-5)
                 break;
         }
