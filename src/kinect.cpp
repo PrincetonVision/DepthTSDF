@@ -88,8 +88,8 @@ Image<uint16_t, HostDevice> fusedDepth;
 
 int   param_start_index = 1866;
 
-int   param_volume_size = 512;			// 715 is maximum
-float param_volume_dimension = 8.f;
+int   param_volume_size = 640;			// 715 is maximum
+float param_volume_dimension = 4.f;
 
 int   param_frame_threshold = 200;
 float param_angle_factor = 1.f;
@@ -165,7 +165,6 @@ bool GetDepthData(string file_name, uint16_t *data) {
     for (int j = 0; j < kImageCols; ++j) {
       uint16_t s = img.get_pixel(j, i);
       *(data + index) = (s << 13 | s >> 3);
-//      *(data + index) = (s >> 3);
       ++index;
     }
   }
@@ -182,13 +181,12 @@ void SaveFusedDepthFile() {
 	string fused_full_name = fused_dir + depth_serial_name;
 
 	png::image<png::gray_pixel_16> img(kImageCols, kImageRows);
-	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex);
+	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex, inverse(kfusion.pose));
 
 	for (int i = 0; i < kImageRows; ++i) {
 		for (int j = 0; j < kImageCols; ++j) {
 			uint16_t s = fusedDepth[make_uint2(j,i)];
 			img[i][j] = (s >> 13 | s << 3);
-//			img[i][j] = (s << 3);
 		}
 	}
 
@@ -299,6 +297,11 @@ void display(void){
 
 #ifdef SUN3D
 
+//	kfusion.Integrate();
+//	kfusion.Raycast();
+//	SaveFusedDepthFile();
+//	exit(0);
+
     if (param_mode == KINFU_FORWARD) {
     	if (file_index == param_start_index + param_frame_threshold ||
     			file_index == image_list.size()) {
@@ -310,7 +313,7 @@ void display(void){
 
             kfusion.Raycast();
 
-            cout << "IDX" << endl << endl;
+			cout << "IDX" << endl << endl;
             return;
     	}
 
@@ -390,8 +393,6 @@ void display(void){
 		Vector<3, float> init_t = initPose.get_translation();
 		diff_t = curr_t - init_t;
     }
-
-//    cout << "curr_w, diff_t: " << curr_w << "\t" << diff_t << endl;
 
     if ((!integrate && file_index != param_start_index) ||
     		z_angle > angle_threshold * param_angle_factor ||
@@ -643,7 +644,7 @@ int main(int argc, char ** argv) {
     config.dist_threshold = (argc > 2 ) ? atof(argv[2]) : config.dist_threshold;
     config.normal_threshold = (argc > 3 ) ? atof(argv[3]) : config.normal_threshold;
 
-    initPose = SE3<float>(makeVector(size/2, size/2, 2, 0, 0, 0));
+    initPose = SE3<float>(makeVector(size/2, size/2, 0, 0, 0, 0));
 
 #ifdef RENDER_SCENE
     glutInit(&argc, argv);

@@ -200,14 +200,16 @@ void renderInput( Image<float3> pos3D, Image<float3> normal, Image<float> depth,
     raycastInput<<<divup(pos3D.size, block), block>>>(pos3D, normal, depth, volume, view, nearPlane, farPlane, step, largestep);
 }
 
-__global__ void renderFusedKernel(Image<uint16_t> out, const Image<float3> vertex) {
+__global__ void renderFusedKernel(Image<uint16_t> out, const Image<float3> vertex, const Matrix4 invPose) {
 	const uint2 pos = thr2pos2();
-	float f = vertex[pos].z;
+//	float3 v = invPose * vertex[pos];
+	float3 v = vertex[pos];
+	float f = v.z;
 	out[pos] = uint16_t (f * 1000);
 }
 
-void renderFusedMap(Image<uint16_t> out, const Image<float3> & vertex) {
+void renderFusedMap(Image<uint16_t> out, const Image<float3> & vertex, const Matrix4 &invPose) {
 	dim3 block(16,16);
-	renderFusedKernel<<<divup(out.size, block), block>>>(out, vertex);
+	renderFusedKernel<<<divup(out.size, block), block>>>(out, vertex, invPose);
 	cudaDeviceSynchronize();
 }
