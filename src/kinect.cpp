@@ -50,7 +50,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /*============================================================================*/
 #define SUN3D
 //#define RENDER_SCENE
-#define LOCAL_RUN
+//#define LOCAL_RUN
 /*============================================================================*/
 
 using namespace std;
@@ -89,7 +89,7 @@ Image<uint16_t, HostDevice> fusedDepth;
 int   param_start_index = 1866;
 
 int   param_volume_size = 640;			// 715 is maximum
-float param_volume_dimension = 4.f;
+float param_volume_dimension = 8.f;
 
 int   param_frame_threshold = 200;
 float param_angle_factor = 1.f;
@@ -122,8 +122,8 @@ map<int, Matrix4> pose_map;
 string data_dir = "/home/alan/DATA/SUN3D/hotel_umd/maryland_hotel3/";
 string tsdf_dir = data_dir;
 #else
-string data_dir = "/n/fs/sun3d/data/scene/scene_final/hotel_umd/maryland_hotel3/";
-string tsdf_dir = "/n/fs/sun3d/data/sfm/hotel_umd/maryland_hotel3/";
+string data_dir = "/n/fs/sun3d/data/hotel_umd/maryland_hotel3/";
+string tsdf_dir = "/n/fs/sun3d/sfm/hotel_umd/maryland_hotel3/";
 #endif
 
 string intrinsic = data_dir + "intrinsics.txt";
@@ -297,11 +297,6 @@ void display(void){
 
 #ifdef SUN3D
 
-//	kfusion.Integrate();
-//	kfusion.Raycast();
-//	SaveFusedDepthFile();
-//	exit(0);
-
     if (param_mode == KINFU_FORWARD) {
     	if (file_index == param_start_index + param_frame_threshold ||
     			file_index == image_list.size()) {
@@ -313,7 +308,7 @@ void display(void){
 
             kfusion.Raycast();
 
-			cout << "IDX" << endl << endl;
+    		cout << "IDX" << endl << endl;
             return;
     	}
 
@@ -647,7 +642,7 @@ int main(int argc, char ** argv) {
     initPose = SE3<float>(makeVector(size/2, size/2, 0, 0, 0, 0));
 
 #ifdef RENDER_SCENE
-    glutInit(&argc, argv);
+    glutInit(&argc, argv);Maciej Halber
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE );
     glutInitWindowSize(config.inputSize.x * 2 + 640 * 2, max(config.inputSize.y * 2, 480 * 2));
     glutCreateWindow("kfusion");
