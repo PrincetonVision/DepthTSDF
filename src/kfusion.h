@@ -556,7 +556,7 @@ __device__ __forceinline__ float4 raycast( const Volume volume, const uint2 pos,
                 t = t + stepsize * f_tt / (f_t - f_tt);
                 return make_float4(origin + direction * t, t);
             }
-            return make_float4(0, 0, 4, 1);
+//            return make_float4(0, 0, 4, 1);
         }
     }
     return make_float4(0);

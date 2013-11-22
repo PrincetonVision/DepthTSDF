@@ -50,7 +50,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /*============================================================================*/
 #define SUN3D
 //#define RENDER_SCENE
-//#define LOCAL_RUN
+#define LOCAL_RUN
+//#define INITIAL_POSE
 /*============================================================================*/
 
 using namespace std;
@@ -115,8 +116,11 @@ const int kImageChannels = 3;
 vector<string> image_list;
 vector<string> depth_list;
 vector<string> extrinsic_list;
+
+#ifdef INITIAL_POSE
 vector<Matrix4> extrinsic_poses;
 map<int, Matrix4> pose_map;
+#endif
 
 #ifdef LOCAL_RUN
 string data_dir = "/home/alan/DATA/SUN3D/hotel_umd/maryland_hotel3/";
@@ -129,7 +133,11 @@ string tsdf_dir = "/n/fs/sun3d/sfm/hotel_umd/maryland_hotel3/";
 string intrinsic = data_dir + "intrinsics.txt";
 string image_dir = data_dir + "image/";
 string depth_dir = data_dir + "depth/";
+#ifdef INITIAL_POSE
 string fused_dir = data_dir + "depthTSDF/";
+#else
+string fused_dir = data_dir + "depthTSDF_B/";
+#endif
 string extrinsic_dir = data_dir + "extrinsics/";
 
 string frame_dir = tsdf_dir + "frameTSDF/";
@@ -192,6 +200,7 @@ void SaveFusedDepthFile() {
 
 	img.write(fused_full_name.c_str());
 
+#ifdef INITIAL_POSE
 	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) + ".txt";
 	string pose_txt_name  = pose_dir  + serial_txt;
 	string frame_txt_name = frame_dir + serial_txt;
@@ -213,6 +222,7 @@ void SaveFusedDepthFile() {
 	}
 	fclose(fp_frame);
 	pose_file.close();
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -312,13 +322,14 @@ void display(void){
             return;
     	}
 
+#ifdef INITIAL_POSE
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
-
     	if (file_index > 0 && file_index != param_start_index) {
     		Matrix4 delta = inverse(extrinsic_poses[file_index - 1]) * extrinsic_poses[file_index];
     		kfusion.pose = kfusion.pose * delta;
     	}
+#endif
     } else {
     	if (file_index == param_start_index - param_frame_threshold ||
     			file_index == -1) {
@@ -333,8 +344,10 @@ void display(void){
     		exit(0);
     	}
 
+#ifdef INITIAL_POSE
 		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
 		kfusion.pose = kfusion.pose * delta;
+#endif
     }
 
     cout << file_index << " ";
@@ -367,7 +380,10 @@ void display(void){
 
 #ifdef SUN3D
 /*============================================================================*/
+
+#ifdef INITIAL_POSE
     pose_map.insert(make_pair(file_index, kfusion.pose));
+#endif
 
     double z_angle;
     Vector<3, float> diff_t;
@@ -583,7 +599,9 @@ int main(int argc, char ** argv) {
     GetFileNames(image_dir, &image_list);
     GetFileNames(depth_dir, &depth_list);
     GetFileNames(extrinsic_dir, &extrinsic_list);
+#ifdef INITIAL_POSE
     GetExtrinsicData(extrinsic_list[extrinsic_list.size() - 1], &extrinsic_poses);
+#endif
 
     int i_ret;
     float fx, fy, cx, cy, ff;
@@ -642,7 +660,7 @@ int main(int argc, char ** argv) {
     initPose = SE3<float>(makeVector(size/2, size/2, 0, 0, 0, 0));
 
 #ifdef RENDER_SCENE
-    glutInit(&argc, argv);Maciej Halber
+    glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE );
     glutInitWindowSize(config.inputSize.x * 2 + 640 * 2, max(config.inputSize.y * 2, 480 * 2));
     glutCreateWindow("kfusion");
