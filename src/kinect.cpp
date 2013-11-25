@@ -51,8 +51,15 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SUN3D
 //#define RENDER_SCENE
 #define LOCAL_RUN
-//#define INITIAL_POSE
+#define INITIAL_POSE
+#define RESOLUTION_1280X960
 /*============================================================================*/
+
+#ifdef RESOLUTION_1280X960
+float scale_factor = 2.f;
+#else
+float scale_factor = 1.f;
+#endif
 
 using namespace std;
 using namespace TooN;
@@ -188,11 +195,11 @@ void SaveFusedDepthFile() {
 			depth_full_name.size() - param_file_name_length, param_file_name_length);
 	string fused_full_name = fused_dir + depth_serial_name;
 
-	png::image<png::gray_pixel_16> img(kImageCols, kImageRows);
+	png::image<png::gray_pixel_16> img(kImageCols * scale_factor, kImageRows * scale_factor);
 	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex, inverse(kfusion.pose));
 
-	for (int i = 0; i < kImageRows; ++i) {
-		for (int j = 0; j < kImageCols; ++j) {
+	for (int i = 0; i < kImageRows * scale_factor; ++i) {
+		for (int j = 0; j < kImageCols * scale_factor; ++j) {
 			uint16_t s = fusedDepth[make_uint2(j,i)];
 			img[i][j] = (s >> 13 | s << 3);
 		}
@@ -375,6 +382,13 @@ void display(void){
     Stats.sample("raw to cooked");
 #endif
 
+#if 0
+    kfusion.Integrate();
+	kfusion.Raycast();
+	SaveFusedDepthFile();
+	exit(0);
+#endif
+
     integrate = kfusion.Track();
     Stats.sample("track");
 
@@ -488,14 +502,14 @@ void display(void){
     glClear(GL_COLOR_BUFFER_BIT);
     glRasterPos2i(0, 0);
     glDrawPixels(lightScene);
-    glRasterPos2i(0, kImageRows);
+    glRasterPos2i(0, kImageRows * scale_factor);
     glPixelZoom(1, -1);
     glDrawPixels(rgbImage);
-    glRasterPos2i(kImageCols,0);
+    glRasterPos2i(kImageCols * scale_factor,0);
     glDrawPixels(lightModel);
-    glRasterPos2i(kImageCols,kImageRows);
+    glRasterPos2i(kImageCols * scale_factor, kImageRows * scale_factor);
     glDrawPixels(trackModel);
-    glRasterPos2i(kImageCols * 2, 0);
+    glRasterPos2i(kImageCols * scale_factor * 2, 0);
     glPixelZoom(2, -2);
     glDrawPixels(texModel);
 #endif
@@ -636,11 +650,12 @@ int main(int argc, char ** argv) {
     config.combinedTrackAndReduce = false;
 
     // change the following parameters for using 640 x 480 input images
-    config.inputSize = make_uint2(kImageCols, kImageRows);
+    uint2 input_size = make_uint2(kImageCols, kImageRows);
+    uint2 image_size = input_size * scale_factor;
+    config.inputSize = image_size;
 
 #ifdef SUN3D
-    float factor = 1.0f;
-    config.camera =  make_float4(fx / factor, fy / factor, cx / factor, cy / factor);
+    config.camera =  make_float4(fx * scale_factor, fy * scale_factor, cx * scale_factor, cy * scale_factor);
 
     config.rsme_threshold = param_rsme_threshold;
 //    config.track_threshold = 0.7f;
@@ -662,20 +677,20 @@ int main(int argc, char ** argv) {
 #ifdef RENDER_SCENE
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE );
-    glutInitWindowSize(config.inputSize.x * 2 + 640 * 2, max(config.inputSize.y * 2, 480 * 2));
+    glutInitWindowSize(config.inputSize.x * 2 + kImageCols * scale_factor * 2, max(config.inputSize.y * 2, kImageRows * scale_factor * 2));
     glutCreateWindow("kfusion");
 #endif
 
     kfusion.Init(config);
 
     // input buffers
-    depthImage[0].alloc(make_uint2(640, 480));
-    depthImage[1].alloc(make_uint2(640, 480));
-    rgbImage.alloc(make_uint2(640, 480));
+    depthImage[0].alloc(input_size);
+    depthImage[1].alloc(input_size);
+    rgbImage.alloc(input_size);
 
     // render buffers
-    lightScene.alloc(config.inputSize), trackModel.alloc(config.inputSize), lightModel.alloc(config.inputSize);
-    pos.alloc(make_uint2(640, 480)), normals.alloc(make_uint2(640, 480)), dep.alloc(make_uint2(640, 480)), texModel.alloc(make_uint2(640, 480) * 2);
+    lightScene.alloc(image_size), trackModel.alloc(image_size), lightModel.alloc(image_size);
+    pos.alloc(image_size), normals.alloc(image_size), dep.alloc(image_size), texModel.alloc(image_size * 2);
 
     if(printCUDAError()) {
         cudaDeviceReset();
@@ -687,7 +702,7 @@ int main(int argc, char ** argv) {
     memset(rgbImage.data(), 0, rgbImage.size.x*rgbImage.size.y * sizeof(uchar3));
 
 #ifdef SUN3D
-    fusedDepth.alloc(make_uint2(kImageCols, kImageRows));
+    fusedDepth.alloc(image_size);
 #else
     uint16_t * buffers[2] = {depthImage[0].data(), depthImage[1].data()};
     if(InitKinect(buffers, (unsigned char *)rgbImage.data())){

@@ -119,7 +119,19 @@ __global__ void vertex2normal( Image<float3> normal, const Image<float3> vertex 
 template <int HALFSAMPLE>
 __global__ void mm2meters( Image<float> depth, const Image<ushort> in ){
     const uint2 pixel = thr2pos2();
-    depth[pixel] = in[pixel * (HALFSAMPLE+1)] / 1000.0f;
+    switch (HALFSAMPLE) {
+    case 0:		// 1:1
+    	depth[pixel] = in[pixel] / 1000.0f;
+    	break;
+    case 1:		//
+    	depth[pixel] = in[pixel * 2] / 1000.0f;
+    	break;
+    case 2:		// output is twice of input depth
+    	depth[pixel] = in[make_uint2(uint(pixel.x * 0.5), uint(pixel.y * 0.5))] / 1000.0f;
+    	break;
+    default:
+    	break;
+    }
 }
 
 //column pass using coalesced global memory reads
@@ -453,6 +465,8 @@ void KFusion::setKinectDeviceDepth( const Image<uint16_t> & in){
         mm2meters<0><<<divup(rawDepth.size, configuration.imageBlock), configuration.imageBlock>>>(rawDepth, in);
     else if(configuration.inputSize.x == in.size.x / 2 )
         mm2meters<1><<<divup(rawDepth.size, configuration.imageBlock), configuration.imageBlock>>>(rawDepth, in);
+    else if(configuration.inputSize.x == in.size.x * 2 )
+        mm2meters<2><<<divup(rawDepth.size, configuration.imageBlock), configuration.imageBlock>>>(rawDepth, in);
     else
         assert(false);
 }
