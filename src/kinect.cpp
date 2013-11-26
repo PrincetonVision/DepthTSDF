@@ -50,9 +50,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /*============================================================================*/
 #define SUN3D
 //#define RENDER_SCENE
-#define LOCAL_RUN
+//#define LOCAL_RUN
 #define INITIAL_POSE
-#define RESOLUTION_1280X960
+//#define RESOLUTION_1280X960
 /*============================================================================*/
 
 #ifdef RESOLUTION_1280X960
@@ -133,18 +133,28 @@ map<int, Matrix4> pose_map;
 string data_dir = "/home/alan/DATA/SUN3D/hotel_umd/maryland_hotel3/";
 string tsdf_dir = data_dir;
 #else
-string data_dir = "/n/fs/sun3d/data/hotel_umd/maryland_hotel3/";
-string tsdf_dir = "/n/fs/sun3d/sfm/hotel_umd/maryland_hotel3/";
+string data_prefix = "/n/fs/sun3d/data/";
+string tsdf_prefix = "/n/fs/sun3d/sfm/";
+
+//string data_name = "hotel_umd/maryland_hotel3/";
+string data_name = "home_md/home_md_scan9_2012_sep_30/";
+
+string data_dir = data_prefix + data_name;
+string tsdf_dir = tsdf_prefix + data_name;
 #endif
 
 string intrinsic = data_dir + "intrinsics.txt";
 string image_dir = data_dir + "image/";
 string depth_dir = data_dir + "depth/";
+
 #ifdef INITIAL_POSE
 string fused_dir = data_dir + "depthTSDF/";
+#elif RESOLUTION_1280X960
+string fused_dir = data_dir + "depth1280x960/";
 #else
-string fused_dir = data_dir + "depthTSDF_B/";
+string fused_dir = data_dir + "depthKinFu/";
 #endif
+
 string extrinsic_dir = data_dir + "extrinsics/";
 
 string frame_dir = tsdf_dir + "frameTSDF/";
