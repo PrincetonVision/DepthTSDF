@@ -49,6 +49,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "cutil_math.h"
 
+
+#define RESOLUTION_1280X960
+
+
 inline int divup(int a, int b) { return (a % b != 0) ? (a / b + 1) : (a / b); }
 inline dim3 divup( uint2 a, dim3 b) { return dim3(divup(a.x, b.x), divup(a.y, b.y)); }
 inline dim3 divup( dim3 a, dim3 b) { return dim3(divup(a.x, b.x), divup(a.y, b.y), divup(a.z, b.z)); }
@@ -467,6 +471,12 @@ struct KFusion {
     Volume integration;
     Image<TrackData, Device> reduction;
     Image<float3, Device> vertex, normal;
+
+#ifdef RESOLUTION_1280X960
+    Image<float3, Device> vertex_2, normal_2;
+    void Raycast_2();
+#endif
+
 
     std::vector<Image<float3, Device> > inputVertex, inputNormal;
     std::vector<Image<float, Device> > inputDepth;

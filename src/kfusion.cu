@@ -119,19 +119,7 @@ __global__ void vertex2normal( Image<float3> normal, const Image<float3> vertex 
 template <int HALFSAMPLE>
 __global__ void mm2meters( Image<float> depth, const Image<ushort> in ){
     const uint2 pixel = thr2pos2();
-    switch (HALFSAMPLE) {
-    case 0:		// 1:1
-    	depth[pixel] = in[pixel] / 1000.0f;
-    	break;
-    case 1:		//
-    	depth[pixel] = in[pixel * 2] / 1000.0f;
-    	break;
-    case 2:		// output is twice of input depth
-    	depth[pixel] = in[make_uint2(uint(pixel.x * 0.5), uint(pixel.y * 0.5))] / 1000.0f;
-    	break;
-    default:
-    	break;
-    }
+    depth[pixel] = in[pixel * (HALFSAMPLE+1)] / 1000.0f;
 }
 
 //column pass using coalesced global memory reads
@@ -427,6 +415,11 @@ void KFusion::Init( const KFusionConfig & config ) {
     normal.alloc(config.inputSize);
     rawDepth.alloc(config.inputSize);
 
+#ifdef RESOLUTION_1280X960
+    vertex_2.alloc(config.inputSize * 2);
+    normal_2.alloc(config.inputSize * 2);
+#endif
+
     inputDepth.resize(config.iterations.size());
     inputVertex.resize(config.iterations.size());
     inputNormal.resize(config.iterations.size());
@@ -465,8 +458,6 @@ void KFusion::setKinectDeviceDepth( const Image<uint16_t> & in){
         mm2meters<0><<<divup(rawDepth.size, configuration.imageBlock), configuration.imageBlock>>>(rawDepth, in);
     else if(configuration.inputSize.x == in.size.x / 2 )
         mm2meters<1><<<divup(rawDepth.size, configuration.imageBlock), configuration.imageBlock>>>(rawDepth, in);
-    else if(configuration.inputSize.x == in.size.x * 2 )
-        mm2meters<2><<<divup(rawDepth.size, configuration.imageBlock), configuration.imageBlock>>>(rawDepth, in);
     else
         assert(false);
 }
@@ -530,6 +521,14 @@ void KFusion::Raycast(){
     raycastPose = pose;
     raycast<<<divup(configuration.inputSize, configuration.raycastBlock), configuration.raycastBlock>>>(vertex, normal, integration, raycastPose * getInverseCameraMatrix(configuration.camera), configuration.nearPlane, configuration.farPlane, configuration.stepSize(), 0.75f * configuration.mu);
 }
+
+#ifdef RESOLUTION_1280X960
+void KFusion::Raycast_2(){
+    // raycast integration volume into the depth, vertex, normal buffers
+    raycastPose = pose;
+    raycast<<<divup(configuration.inputSize * 2, configuration.raycastBlock), configuration.raycastBlock>>>(vertex_2, normal_2, integration, raycastPose * getInverseCameraMatrix(configuration.camera * 2), configuration.nearPlane, configuration.farPlane, configuration.stepSize(), 0.75f * configuration.mu);
+}
+#endif
 
 bool KFusion::Track() {
     const Matrix4 invK = getInverseCameraMatrix(configuration.camera);
