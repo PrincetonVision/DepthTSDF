@@ -50,7 +50,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "cutil_math.h"
 
 
-#define RESOLUTION_1280X960
+//#define RESOLUTION_1280X960
 
 
 inline int divup(int a, int b) { return (a % b != 0) ? (a / b + 1) : (a / b); }

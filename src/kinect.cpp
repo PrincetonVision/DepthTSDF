@@ -123,33 +123,14 @@ map<int, Matrix4> pose_map;
 #endif
 
 #ifdef LOCAL_RUN
-string data_dir = "/home/alan/DATA/SUN3D/hotel_umd/maryland_hotel3/";
-string tsdf_dir = data_dir;
+string data_prefix = "/home/alan/DATA/SUN3D/";
+string tsdf_prefix = data_prefix;
 #else
 string data_prefix = "/n/fs/sun3d/data/";
 string tsdf_prefix = "/n/fs/sun3d/sfm/";
-
-string data_name = "hotel_umd/maryland_hotel3/";
-//string data_name = "home_md/home_md_scan9_2012_sep_30/";
-
-string data_dir = data_prefix + data_name;
-string tsdf_dir = tsdf_prefix + data_name;
 #endif
 
-string intrinsic = data_dir + "intrinsics.txt";
-string image_dir = data_dir + "image/";
-string depth_dir = data_dir + "depth/";
-
-#ifdef RESOLUTION_1280X960
-string fused_dir = data_dir + "depth1280x960/";
-#else
-string fused_dir = data_dir + "depthTSDF/";
-#endif
-
-string extrinsic_dir = data_dir + "extrinsics/";
-
-string frame_dir = tsdf_dir + "frameTSDF/";
-string pose_dir  = tsdf_dir + "poseTSDF/";
+string image_dir, depth_dir, fused_dir, extrinsic_dir, frame_dir, pose_dir;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -622,8 +603,43 @@ void exitFunc(void){
 int main(int argc, char ** argv) {
 #ifdef SUN3D
 /*============================================================================*/
+
 	cout << "=================================================================" << endl;
-	param_start_index = (argc > 1) ? atoi(argv[1]) : param_start_index;
+
+	string data_name, data_dir, tsdf_dir;
+
+	switch (argc) {
+	case 1:
+		break;
+	case 2:
+		data_name = "hotel_umd/maryland_hotel3/";
+//		data_name = "home_md/home_md_scan9_2012_sep_30/";
+
+		param_start_index = atoi(argv[1]);
+		break;
+	case 3:
+		data_name = argv[1];
+
+		param_start_index = atoi(argv[2]);
+		break;
+	default:
+		assert(false);
+	}
+
+	data_dir = data_prefix + data_name;
+	tsdf_dir = tsdf_prefix + data_name;
+	image_dir = data_dir + "image/";
+	depth_dir = data_dir + "depth/";
+	extrinsic_dir = data_dir + "extrinsics/";
+	frame_dir = tsdf_dir + "frameTSDF/";
+	pose_dir  = tsdf_dir + "poseTSDF/";
+
+#ifdef RESOLUTION_1280X960
+	fused_dir = data_dir + "depth1280x960/";
+#else
+	fused_dir = data_dir + "depthTSDF/";
+#endif
+
 	file_index = param_start_index;
 
     size = param_volume_dimension;
@@ -637,6 +653,7 @@ int main(int argc, char ** argv) {
 
     int i_ret;
     float fx, fy, cx, cy, ff;
+	string intrinsic = data_dir + "intrinsics.txt";
     FILE *fp = fopen(intrinsic.c_str(), "r");
     i_ret = fscanf(fp, "%f", &fx);
     i_ret = fscanf(fp, "%f", &ff);
@@ -685,9 +702,6 @@ int main(int argc, char ** argv) {
     config.iterations[0] = 10;
     config.iterations[1] = 5;
     config.iterations[2] = 4;
-
-    config.dist_threshold = (argc > 2 ) ? atof(argv[2]) : config.dist_threshold;
-    config.normal_threshold = (argc > 3 ) ? atof(argv[3]) : config.normal_threshold;
 
     initPose = SE3<float>(makeVector(size/2, size/2, 0, 0, 0, 0));
 
