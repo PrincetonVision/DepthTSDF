@@ -1,0 +1,9 @@
+1. Put 
+	- 'run_sh' and 
+	- 'kfusion' (OR 'DepthTSDF') in the same directory.
+2. Run
+	sh ./run_sh DATA_NAME ####
+
+3. Example
+	sh ./run_sh hotel_umd/maryland_hotel3/ 1869
+	####: 1-base
