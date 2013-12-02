@@ -7,6 +7,9 @@ size=$(ls $all | wc -l)
 
 total=$(($size - 1))
 
+echo $all
+echo $size
+
 for i in $(seq 0 $total)
 do 
     ./DepthTSDF $1 $2 $3 $i

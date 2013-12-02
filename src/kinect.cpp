@@ -613,6 +613,11 @@ int main(int argc, char ** argv) {
 
 		break;
 	case 5:
+		data_prefix = argv[1];
+		sfm_prefix  = argv[2];
+		data_name   = argv[3];
+		param_start_index = atoi(argv[4]);
+
 		break;
 	default:
 		cout << "Wrong arguments...";
@@ -630,7 +635,7 @@ int main(int argc, char ** argv) {
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
 #else
-	fused_dir = data_dir + "depthTSDF/";
+	fused_dir = sfm_dir + "depthTSDF/";
 #endif
 
 	file_index = param_start_index;
