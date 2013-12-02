@@ -4,5 +4,5 @@ TOTAL=$(($2 - 1))
 
 for i in $(seq 0 $TOTAL)
 do 
-    ./kfusion $1 $i
+    ./DepthTSDF $1 $i
 done
