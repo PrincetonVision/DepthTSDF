@@ -122,14 +122,6 @@ vector<Matrix4> extrinsic_poses;
 map<int, Matrix4> pose_map;
 #endif
 
-#ifdef LOCAL_RUN
-string data_prefix = "/home/alan/DATA/SUN3D/";
-string tsdf_prefix = data_prefix;
-#else
-string data_prefix = "/n/fs/sun3d/data/";
-string tsdf_prefix = "/n/fs/sun3d/sfm/";
-#endif
-
 string image_dir, depth_dir, fused_dir, extrinsic_dir, frame_dir, pose_dir;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -606,33 +598,34 @@ int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
 
-	string data_name, data_dir, tsdf_dir;
+	string data_prefix, sfm_prefix, data_dir, sfm_dir, data_name;
 
 	switch (argc) {
 	case 1:
+		data_prefix = "/home/alan/DATA/SUN3D/";
+		sfm_prefix  = data_dir;
+		data_name   = "hotel_umd/maryland_hotel3/";
 		break;
-	case 2:
-		data_name = "hotel_umd/maryland_hotel3/";
-//		data_name = "home_md/home_md_scan9_2012_sep_30/";
+	case 4:
+		data_prefix = argv[1];
+		sfm_prefix  = argv[2];
+		data_name   = argv[3];
 
-		param_start_index = atoi(argv[1]);
 		break;
-	case 3:
-		data_name = argv[1];
-
-		param_start_index = atoi(argv[2]);
+	case 5:
 		break;
 	default:
-		assert(false);
+		cout << "Wrong arguments...";
+		exit(0);
 	}
 
 	data_dir = data_prefix + data_name;
-	tsdf_dir = tsdf_prefix + data_name;
+	sfm_dir  = sfm_prefix  + data_name;
 	image_dir = data_dir + "image/";
 	depth_dir = data_dir + "depth/";
 	extrinsic_dir = data_dir + "extrinsics/";
-	frame_dir = tsdf_dir + "frameTSDF/";
-	pose_dir  = tsdf_dir + "poseTSDF/";
+	frame_dir = sfm_dir + "frameTSDF/";
+	pose_dir  = sfm_dir + "poseTSDF/";
 
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
