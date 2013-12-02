@@ -1,6 +1,6 @@
 1. Put 
 	- 'run_sh' and 
-	- 'kfusion' (OR 'DepthTSDF') in the same directory.
+	- 'DepthTSDF' in the same directory.
 2. Run
 	sh ./run_sh DATA_NAME ####
 
