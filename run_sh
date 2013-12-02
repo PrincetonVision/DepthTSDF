@@ -1,17 +1,13 @@
 #!/bin/sh
 
-dir=$1
+dir=$1$2
 dep="depth/"
 all=$dir$dep
 size=$(ls $all | wc -l)
 
-#echo $dir
-#echo $all
-#echo $size
+total=$(($size - 1))
 
-TOTAL=$(($size - 1))
-
-for i in $(seq 0 $TOTAL)
+for i in $(seq 0 $total)
 do 
-    ./DepthTSDF $dir $i
+    ./DepthTSDF $1 $2 $3 $i
 done
