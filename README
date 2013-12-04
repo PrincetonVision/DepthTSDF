@@ -2,8 +2,8 @@
 	- 'run_sh' and 
 	- 'DepthTSDF' in the same directory.
 2. Run
-	sh ./run_sh DATA_NAME ####
+	sh  ./run_sh  data_dir  sfm_dir  data_name
 
 3. Example
-	sh ./run_sh hotel_umd/maryland_hotel3/ 1869
-	####: 1-base
+	sh  ./run_sh  /n/fs/sun3d/data/  /n/fs/sun3d/sfm/  hotel_umd/maryland_hotel3/
+
