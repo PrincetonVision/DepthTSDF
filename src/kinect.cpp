@@ -603,7 +603,7 @@ int main(int argc, char ** argv) {
 	switch (argc) {
 	case 1:
 		data_prefix = "/home/alan/DATA/SUN3D/";
-		sfm_prefix  = data_dir;
+		sfm_prefix  = data_prefix;
 		data_name   = "hotel_umd/maryland_hotel3/";
 		break;
 	case 4:
