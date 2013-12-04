@@ -2,8 +2,15 @@
 	- 'run_sh' and 
 	- 'DepthTSDF' in the same directory.
 2. Run
-	sh  ./run_sh  data_dir  sfm_dir  data_name
+	sh  ./run_sh  data_dir  sfm_dir  data_name  ...
 
 3. Example
-	sh  ./run_sh  /n/fs/sun3d/data/  /n/fs/sun3d/sfm/  hotel_umd/maryland_hotel3/
+	sh  ./run_sh  /n/fs/sun3d/data/  /n/fs/sun3d/sfm/  hotel_umd/maryland_hotel3/  150 700 5.0 1.1 ...
+
+	param1: frame threshold			(default: 200)
+	param2: volume size			(default: 640 voxels)
+	param3: volume dimension		(default: 8.0 meter)
+	param4: angle scale factor 		(default: 1.0)
+	param5: translation scale factor 	(default: 1.0)
+	param6: RSME 				(default: 0.015)
 

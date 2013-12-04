@@ -87,9 +87,9 @@ Image<uint16_t, HostDevice> fusedDepth;
 ////////////////////////////////////////////////////////////////////////////////
 // global parameter
 
-int   param_start_index = 1866;
+int   param_start_index = 200;
 
-int   param_volume_size = 640;			// 715 is maximum
+int   param_volume_size = 640;
 float param_volume_dimension = 8.f;
 
 int   param_frame_threshold = 200;
@@ -600,29 +600,28 @@ int main(int argc, char ** argv) {
 
 	string data_prefix, sfm_prefix, data_dir, sfm_dir, data_name;
 
-	switch (argc) {
-	case 1:
-		data_prefix = "/home/alan/DATA/SUN3D/";
-		sfm_prefix  = data_prefix;
-		data_name   = "hotel_umd/maryland_hotel3/";
-		break;
-	case 4:
-		data_prefix = argv[1];
-		sfm_prefix  = argv[2];
-		data_name   = argv[3];
-
-		break;
-	case 5:
+	if (argc < 5) {
+		cout << "Wrong arguments ..." << endl;
+		exit(0);
+	} else {
 		data_prefix = argv[1];
 		sfm_prefix  = argv[2];
 		data_name   = argv[3];
 		param_start_index = atoi(argv[4]);
-
-		break;
-	default:
-		cout << "Wrong arguments...";
-		exit(0);
 	}
+
+	if (argc > 5)
+		param_frame_threshold = atoi(argv[5]);
+	if (argc > 6)
+		param_volume_size = atoi(argv[6]);
+	if (argc > 7)
+		param_volume_dimension = atof(argv[7]);
+	if (argc > 8)
+		param_angle_factor = atof(argv[8]);
+	if (argc > 9)
+		param_translation_factor = atof(argv[9]);
+	if (argc > 10)
+		param_rsme_threshold = atof(argv[10]);
 
 	data_dir = data_prefix + data_name;
 	sfm_dir  = sfm_prefix  + data_name;

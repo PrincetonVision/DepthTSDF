@@ -70,5 +70,6 @@ if (GLUT_FOUND)
 
 endif()
 
-#	cd .. && rm -rf build && mkdir build && cd build && cmake .. && make
+#	cd .. && rm -rf build && mkdir build && cd build && cmake .. && make && ln -s ../run_sh
+#	sh ./run_sh /home/alan/DATA/SUN3D/ /home/alan/DATA/SUN3D/ hotel_umd/maryland_hotel3/
 
