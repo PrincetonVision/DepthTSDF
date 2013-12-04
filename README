@@ -14,3 +14,10 @@
 	param5: translation scale factor 	(default: 1.0)
 	param6: RSME 				(default: 0.015)
 
+=====================================================================
+
+Dependencies in Ubuntu 
+	1. follow instructions in https://github.com/GerhardR/kfusion
+	2. sudo apt-get install libpng++-dev
+	3. sudo apt-get install libjpeg-turbo8-dev
+
