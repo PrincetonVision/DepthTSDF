@@ -1,6 +1,6 @@
 #!/bin/sh
 
-dir=$1$3
+dir=$1$4
 img="image/"
 all=$dir$img
 size=$(ls $all | wc -l)
@@ -12,5 +12,5 @@ echo $size
 
 for i in $(seq 0 $total)
 do 
-    ./DepthTSDF $1 $2 $3 $i $4 $5 $6 $7 $8 $9
+    ./DepthTSDF $1 $2 $3 $4 $i $5 $6 $7 $8 $9 $10
 done

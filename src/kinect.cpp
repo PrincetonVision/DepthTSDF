@@ -645,30 +645,31 @@ int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
 
-	string data_prefix, sfm_prefix, data_dir, sfm_dir, data_name;
+	string server_prefix, data_prefix, sfm_prefix, data_dir, sfm_dir, data_name;
 
 	if (argc < 5) {
 		cout << "Wrong arguments ..." << endl;
 		exit(0);
 	} else {
-		data_prefix = argv[1];
-		sfm_prefix  = argv[2];
-		data_name   = argv[3];
-		param_start_index = atoi(argv[4]);
+		server_prefix = argv[1];
+		data_prefix = argv[2];
+		sfm_prefix  = argv[3];
+		data_name   = argv[4];
+		param_start_index = atoi(argv[5]);
 	}
 
-	if (argc > 5)
-		param_frame_threshold = atoi(argv[5]);
 	if (argc > 6)
-		param_volume_size = atoi(argv[6]);
+		param_frame_threshold = atoi(argv[6]);
 	if (argc > 7)
-		param_volume_dimension = atof(argv[7]);
+		param_volume_size = atoi(argv[7]);
 	if (argc > 8)
-		param_angle_factor = atof(argv[8]);
+		param_volume_dimension = atof(argv[8]);
 	if (argc > 9)
-		param_translation_factor = atof(argv[9]);
+		param_angle_factor = atof(argv[9]);
 	if (argc > 10)
-		param_rsme_threshold = atof(argv[10]);
+		param_translation_factor = atof(argv[10]);
+	if (argc > 11)
+		param_rsme_threshold = atof(argv[11]);
 
 	data_dir = data_prefix + data_name;
 	sfm_dir  = sfm_prefix  + data_name;
@@ -681,7 +682,7 @@ int main(int argc, char ** argv) {
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
 #else
-	fused_dir = data_dir + "depthTSDF/";
+	fused_dir = sfm_dir + "depthTSDF/";
 #endif
 
 	file_index = param_start_index;
