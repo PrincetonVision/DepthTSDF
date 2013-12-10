@@ -98,6 +98,8 @@ float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
 
 int   param_file_name_length = 24;
+int   param_time_stamp_pose = 8;
+int   param_time_stamp_length = 12;
 
 enum  KinfuMode {KINFU_FORWARD, KINFU_BACKWARD};
 KinfuMode param_mode = KINFU_FORWARD;
@@ -592,6 +594,51 @@ void exitFunc(void){
     cudaDeviceReset();
 }
 
+#ifdef SUN3D
+/*============================================================================*/
+int GetTimeStamp(const string &file_name) {
+  return atoi(file_name.substr(
+              file_name.size() - param_file_name_length + param_time_stamp_pose,
+              param_time_stamp_length).c_str());
+}
+
+void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
+  vector<string> depth_temp;
+  depth_temp.swap(*depth_list);
+  depth_list->clear();
+  depth_list->reserve(image_list.size());
+
+  int idx = 0;
+  int depth_time = GetTimeStamp(depth_temp[idx]);
+  int time_low = depth_time;
+
+
+  for (unsigned int i = 0; i < image_list.size(); ++i) {
+    int image_time = GetTimeStamp(image_list[i]);
+
+    while (depth_time < image_time) {
+      if (idx == depth_temp.size() - 1)
+        break;
+
+      time_low = depth_time;
+      depth_time = GetTimeStamp(depth_temp[++idx]);
+    }
+
+    if (idx == 0 && depth_time > image_time) {
+      depth_list->push_back(depth_temp[idx]);
+      continue;
+    }
+
+    if (abs(image_time - time_low) < abs(depth_time - image_time)) {
+      depth_list->push_back(depth_temp[idx-1]);
+    } else {
+      depth_list->push_back(depth_temp[idx]);
+    }
+  }
+}
+/*----------------------------------------------------------------------------*/
+#endif
+
 int main(int argc, char ** argv) {
 #ifdef SUN3D
 /*============================================================================*/
@@ -634,7 +681,7 @@ int main(int argc, char ** argv) {
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
 #else
-	fused_dir = sfm_dir + "depthTSDF/";
+	fused_dir = data_dir + "depthTSDF/";
 #endif
 
 	file_index = param_start_index;
@@ -644,6 +691,8 @@ int main(int argc, char ** argv) {
     GetFileNames(image_dir, &image_list);
     GetFileNames(depth_dir, &depth_list);
     GetFileNames(extrinsic_dir, &extrinsic_list);
+    AssignDepthList(image_list, &depth_list);
+
 #ifdef INITIAL_POSE
     GetExtrinsicData(extrinsic_list[extrinsic_list.size() - 1], &extrinsic_poses);
 #endif

@@ -19,6 +19,8 @@ find_path(FREENECT_INCLUDE_PATH libfreenect.h
 	/usr/local/include
 	)
 	
+#message(${FREENECT_INCLUDE_PATH})
+
 find_path(LIBUSB1_INCLUDE_PATH libusb-1.0/libusb.h
 #    PATH_SUFFIXES libusb-1.0
  	~/usr/include
