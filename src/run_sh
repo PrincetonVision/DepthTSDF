@@ -1,8 +1,8 @@
 #!/bin/sh
 
 dir=$1$3
-dep="depth/"
-all=$dir$dep
+img="image/"
+all=$dir$img
 size=$(ls $all | wc -l)
 
 total=$(($size - 1))
