@@ -647,7 +647,7 @@ int main(int argc, char ** argv) {
 
 	string server_prefix, data_prefix, sfm_prefix, data_dir, sfm_dir, data_name;
 
-	if (argc < 5) {
+	if (argc < 6) {
 		cout << "Wrong arguments ..." << endl;
 		exit(0);
 	} else {
