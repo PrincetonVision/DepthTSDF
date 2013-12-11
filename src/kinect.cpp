@@ -645,7 +645,7 @@ int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
 
-	string server_prefix, data_prefix, sfm_prefix, data_dir, sfm_dir, data_name;
+	string server_prefix, data_prefix, sfm_prefix, ser_dir, data_dir, sfm_dir, data_name;
 
 	if (argc < 6) {
 		cout << "Wrong arguments ..." << endl;
@@ -671,18 +671,21 @@ int main(int argc, char ** argv) {
 	if (argc > 11)
 		param_rsme_threshold = atof(argv[11]);
 
-	data_dir = data_prefix + data_name;
+	server_dir = server_prefix + data_name;
+	image_dir = server_dir + "image/";
+	depth_dir = server_dir + "depth/";
+	extrinsic_dir = server_dir + "extrinsics/";
+
 	sfm_dir  = sfm_prefix  + data_name;
-	image_dir = data_dir + "image/";
-	depth_dir = data_dir + "depth/";
-	extrinsic_dir = data_dir + "extrinsics/";
 	frame_dir = sfm_dir + "frameTSDF/";
 	pose_dir  = sfm_dir + "poseTSDF/";
+
+	data_dir = data_prefix + data_name;
 
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
 #else
-	fused_dir = sfm_dir + "depthTSDF/";
+	fused_dir = data_dir + "depthTSDF/";
 #endif
 
 	file_index = param_start_index;
@@ -700,7 +703,7 @@ int main(int argc, char ** argv) {
 
     int i_ret;
     float fx, fy, cx, cy, ff;
-	string intrinsic = data_dir + "intrinsics.txt";
+	string intrinsic = server_dir + "intrinsics.txt";
     FILE *fp = fopen(intrinsic.c_str(), "r");
     i_ret = fscanf(fp, "%f", &fx);
     i_ret = fscanf(fp, "%f", &ff);
