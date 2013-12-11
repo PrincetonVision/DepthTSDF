@@ -645,7 +645,7 @@ int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
 
-	string server_prefix, data_prefix, sfm_prefix, ser_dir, data_dir, sfm_dir, data_name;
+	string server_prefix, data_prefix, sfm_prefix, server_dir, data_dir, sfm_dir, data_name;
 
 	if (argc < 6) {
 		cout << "Wrong arguments ..." << endl;
