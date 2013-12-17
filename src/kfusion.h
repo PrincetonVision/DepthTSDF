@@ -51,6 +51,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 //#define RESOLUTION_1280X960
+#define INITIAL_POSE
 
 
 inline int divup(int a, int b) { return (a % b != 0) ? (a / b + 1) : (a / b); }

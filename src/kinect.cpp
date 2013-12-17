@@ -51,7 +51,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SUN3D
 //#define RENDER_SCENE
 //#define LOCAL_RUN
-#define INITIAL_POSE
 /*============================================================================*/
 
 using namespace std;
@@ -121,7 +120,7 @@ vector<string> extrinsic_list;
 
 #ifdef INITIAL_POSE
 vector<Matrix4> extrinsic_poses;
-map<int, Matrix4> pose_map;
+//map<int, Matrix4> pose_map;
 #endif
 
 string image_dir, depth_dir, fused_dir, extrinsic_dir, frame_dir, pose_dir;
@@ -200,27 +199,27 @@ void SaveFusedDepthFile() {
 
 #ifdef INITIAL_POSE
 #ifndef RESOLUTION_1280X960
-	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) + ".txt";
-	string pose_txt_name  = pose_dir  + serial_txt;
-	string frame_txt_name = frame_dir + serial_txt;
-
-	FILE *fp_frame = fopen(frame_txt_name.c_str(), "w");
-	ofstream pose_file;
-	pose_file.open(pose_txt_name.c_str());
-	pose_file.precision(60);
-
-	for (map<int, Matrix4>::iterator it = pose_map.begin(); it != pose_map.end(); ++it) {
-		fprintf(fp_frame, "%d\n", it->first);
-		Matrix4 m = it->second;
-		for (int i = 0; i < 3; ++i) {
-			pose_file << m.data[i].x << "\t";
-			pose_file << m.data[i].y << "\t";
-			pose_file << m.data[i].z << "\t";
-			pose_file << m.data[i].w << "\n";
-		}
-	}
-	fclose(fp_frame);
-	pose_file.close();
+//	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) + ".txt";
+//	string pose_txt_name  = pose_dir  + serial_txt;
+//	string frame_txt_name = frame_dir + serial_txt;
+//
+//	FILE *fp_frame = fopen(frame_txt_name.c_str(), "w");
+//	ofstream pose_file;
+//	pose_file.open(pose_txt_name.c_str());
+//	pose_file.precision(60);
+//
+//	for (map<int, Matrix4>::iterator it = pose_map.begin(); it != pose_map.end(); ++it) {
+//		fprintf(fp_frame, "%d\n", it->first);
+//		Matrix4 m = it->second;
+//		for (int i = 0; i < 3; ++i) {
+//			pose_file << m.data[i].x << "\t";
+//			pose_file << m.data[i].y << "\t";
+//			pose_file << m.data[i].z << "\t";
+//			pose_file << m.data[i].w << "\n";
+//		}
+//	}
+//	fclose(fp_frame);
+//	pose_file.close();
 #endif
 #endif
 }
@@ -375,21 +374,23 @@ void display(void){
     Stats.sample("raw to cooked");
 #endif
 
-#if 0
-    kfusion.Integrate();
-	kfusion.Raycast();
-	SaveFusedDepthFile();
-	exit(0);
-#endif
-
+#ifdef INITIAL_POSE
+    Matrix4 temp = kfusion.pose;
     integrate = kfusion.Track();
     Stats.sample("track");
+    kfusion.pose = temp;
+#else
+    integrate = kfusion.Track();
+    Stats.sample("track");
+#endif
+
+//************************************************************************************************************************************************************************************************
 
 #ifdef SUN3D
 /*============================================================================*/
 
 #ifdef INITIAL_POSE
-    pose_map.insert(make_pair(file_index, kfusion.pose));
+//    pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
 
     double z_angle;
@@ -415,7 +416,7 @@ void display(void){
     if ((!integrate && file_index != param_start_index) ||
     		z_angle > angle_threshold * param_angle_factor ||
     		norm(diff_t) > translation_threshold * param_translation_factor ) {
-		if (param_mode == KINFU_FORWARD) {
+    	if (param_mode == KINFU_FORWARD) {
 			kfusion.Integrate();
 
 			param_mode = KINFU_BACKWARD;

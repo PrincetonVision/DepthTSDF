@@ -531,6 +531,29 @@ void KFusion::Raycast_2(){
 #endif
 
 bool KFusion::Track() {
+#ifdef INITIAL_POSE
+    const Matrix4 invK = getInverseCameraMatrix(configuration.camera);
+
+    vector<dim3> grids;
+    grids.push_back(divup(configuration.inputSize >> 0, configuration.imageBlock));
+
+    // filter the input depth map
+    bilateral_filter<<<grids[0], configuration.imageBlock>>>(inputDepth[0], rawDepth, gaussian, configuration.e_delta, configuration.radius);
+
+	depth2vertex<<<grids[0], configuration.imageBlock>>>( inputVertex[0], inputDepth[0], getInverseCameraMatrix(configuration.camera / float(1 << 0))); // inverse camera matrix depends on level
+	vertex2normal<<<grids[0], configuration.imageBlock>>>( inputNormal[0], inputVertex[0] );
+
+    const Matrix4 oldPose = pose;
+    const Matrix4 projectReference = getCameraMatrix(configuration.camera) * inverse(raycastPose);
+
+    TooN::Matrix<8, 32, float, TooN::Reference::RowMajor> values(output.data());
+
+	track<<<grids[0], configuration.imageBlock>>>( reduction, inputVertex[0], inputNormal[0], vertex, normal, pose, projectReference, configuration.dist_threshold, configuration.normal_threshold);
+	reduce<<<8, 112>>>( output.getDeviceImage().data(), reduction, inputVertex[0].size );             // compute the linear system to solve
+	cudaDeviceSynchronize(); // important due to async nature of kernel call
+	for(int j = 1; j < 8; ++j)
+		values[0] += values[j];
+#else
     const Matrix4 invK = getInverseCameraMatrix(configuration.camera);
 
     vector<dim3> grids;
@@ -573,6 +596,7 @@ bool KFusion::Track() {
                 break;
         }
     }
+#endif
 
     // test on both RSME per pixel and percent of pixels tracked
     if((sqrt(values(0,0) / values(0,28)) > configuration.rsme_threshold) || (values(0,28) / (rawDepth.size.x * rawDepth.size.y) < configuration.track_threshold) ){
