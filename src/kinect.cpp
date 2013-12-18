@@ -123,7 +123,7 @@ vector<Matrix4> extrinsic_poses;
 //map<int, Matrix4> pose_map;
 #endif
 
-string image_dir, depth_dir, fused_dir, extrinsic_dir, frame_dir, pose_dir;
+string image_dir, depth_dir, fused_dir, extrinsic_dir;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -646,40 +646,35 @@ int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
 
-	string server_prefix, data_prefix, sfm_prefix, server_dir, data_dir, sfm_dir, data_name;
+	string server_prefix, data_prefix, server_dir, data_dir, data_name;
 
-	if (argc < 6) {
+	if (argc < 5) {
 		cout << "Wrong arguments ..." << endl;
 		exit(0);
 	} else {
 		server_prefix = argv[1];
 		data_prefix = argv[2];
-		sfm_prefix  = argv[3];
-		data_name   = argv[4];
-		param_start_index = atoi(argv[5]);
+		data_name   = argv[3];
+		param_start_index = atoi(argv[4]);
 	}
 
+	if (argc > 5)
+		param_frame_threshold = atoi(argv[5]);
 	if (argc > 6)
-		param_frame_threshold = atoi(argv[6]);
+		param_volume_size = atoi(argv[6]);
 	if (argc > 7)
-		param_volume_size = atoi(argv[7]);
+		param_volume_dimension = atof(argv[7]);
 	if (argc > 8)
-		param_volume_dimension = atof(argv[8]);
+		param_angle_factor = atof(argv[8]);
 	if (argc > 9)
-		param_angle_factor = atof(argv[9]);
+		param_translation_factor = atof(argv[9]);
 	if (argc > 10)
-		param_translation_factor = atof(argv[10]);
-	if (argc > 11)
-		param_rsme_threshold = atof(argv[11]);
+		param_rsme_threshold = atof(argv[10]);
 
 	server_dir = server_prefix + data_name;
 	image_dir = server_dir + "image/";
 	depth_dir = server_dir + "depth/";
 	extrinsic_dir = server_dir + "extrinsics/";
-
-	sfm_dir  = sfm_prefix  + data_name;
-	frame_dir = sfm_dir + "frameTSDF/";
-	pose_dir  = sfm_dir + "poseTSDF/";
 
 	data_dir = data_prefix + data_name;
 
