@@ -640,6 +640,11 @@ void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
 /*----------------------------------------------------------------------------*/
 #endif
 
+void SystemCommand(const string str) {
+  if (system(str.c_str()))
+    return;
+}
+
 int main(int argc, char ** argv) {
 #ifdef SUN3D
 /*============================================================================*/
@@ -682,6 +687,7 @@ int main(int argc, char ** argv) {
 	fused_dir = data_dir + "depth1280x960/";
 #else
 	fused_dir = data_dir + "depthTSDF/";
+  SystemCommand( "mkdir -p " + fused_dir);
 #endif
 
 	file_index = param_start_index;
