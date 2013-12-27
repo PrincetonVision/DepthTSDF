@@ -391,18 +391,16 @@ void display(void){
     Stats.sample("raw to cooked");
 #endif
 
-#ifdef INITIAL_POSE
+#if 1
     Matrix4 temp = kfusion.pose;
+
     integrate = kfusion.Track();
     Stats.sample("track");
-
-    pose_map.insert(make_pair(file_index, kfusion.pose));
 
     kfusion.pose = temp;
-#else
-    integrate = kfusion.Track();
-    Stats.sample("track");
+    pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
+
 
 //************************************************************************************************************************************************************************************************
 
