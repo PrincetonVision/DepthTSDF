@@ -411,7 +411,6 @@ void display(void){
     integrate = kfusion.Track();
     Stats.sample("track");
 
-    cout << kfusion.pose << endl;
     pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
 
