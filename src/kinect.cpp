@@ -720,7 +720,9 @@ int main(int argc, char ** argv) {
     AssignDepthList(image_list, &depth_list);
 
 #ifdef INITIAL_POSE
-    GetExtrinsicData(extrinsic_list[extrinsic_list.size() - 1], &extrinsic_poses);
+//    GetExtrinsicData(extrinsic_list[extrinsic_list.size() - 1], &extrinsic_poses);
+    GetExtrinsicData(extrinsic_list[1], &extrinsic_poses);
+    cout << extrinsic_list[1] << endl;
 #endif
 
     int i_ret;
