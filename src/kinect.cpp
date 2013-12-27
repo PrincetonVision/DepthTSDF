@@ -337,7 +337,7 @@ void display(void){
             return;
     	}
 
-#ifdef INITIAL_POSE
+#ifdef INITIAL_POSE_
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
     	if (file_index > 0 && file_index != param_start_index) {
@@ -360,7 +360,7 @@ void display(void){
     		exit(0);
     	}
 
-#ifdef INITIAL_POSE
+#ifdef INITIAL_POSE_
 		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
 		kfusion.pose = kfusion.pose * delta;
 #endif
@@ -392,6 +392,12 @@ void display(void){
 #endif
 
 
+#if 0
+    kfusion.Integrate();
+    kfusion.Raycast();
+    SaveFusedDepthFile();
+    exit(0);
+#endif
 
 
 #if 0
