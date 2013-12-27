@@ -23,7 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "kfusion.h"
 #include "helpers.h"
-#include "interface.h"
+//#include "interface.h"
 #include "perfstats.h"
 
 #include <iostream>

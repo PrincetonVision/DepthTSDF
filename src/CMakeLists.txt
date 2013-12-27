@@ -54,7 +54,7 @@ if (GLUT_FOUND)
         include_directories(${FREENECT_INCLUDE_PATHS})
         add_definitions(-DLIBFREENECT_INTERFACE)
         add_executable(DepthTSDF
-            kinect.cpp interface.h interface.cpp
+            kinect.cpp
             )
         target_link_libraries(DepthTSDF kfusion ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES} ${FREENECT_LIBRARIES} 
 		${JPEG_LIBRARIES} ${PNG_LIBRARIES}
@@ -63,7 +63,7 @@ if (GLUT_FOUND)
         include_directories($ENV{KINECTSDK10_DIR}/inc)
         add_definitions(-DMS_KINECT_INTERFACE)
         add_executable(kfusion_kinect
-            kinect.cpp interface.h interface.cpp
+            kinect.cpp
             )
         target_link_libraries(kfusion_kinect kfusion ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES} $ENV{KINECTSDK10_DIR}/lib/amd64/Kinect10.lib) 
     endif()
