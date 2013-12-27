@@ -391,7 +391,12 @@ void display(void){
     Stats.sample("raw to cooked");
 #endif
 
-#if 1
+
+
+
+#if 0
+    // ICP off - actually on for integrate switch
+    // extrinsic on
     Matrix4 temp = kfusion.pose;
 
     integrate = kfusion.Track();
@@ -400,6 +405,18 @@ void display(void){
     kfusion.pose = temp;
     pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
+
+#if 1
+    // ICP on
+    // extrinsic on
+    integrate = kfusion.Track();
+    Stats.sample("track");
+
+    pose_map.insert(make_pair(file_index, kfusion.pose));
+#endif
+
+
+
 
 
 //************************************************************************************************************************************************************************************************
@@ -696,17 +713,20 @@ int main(int argc, char ** argv) {
 	depth_dir = server_dir + "depth/";
 	extrinsic_dir = server_dir + "extrinsics/";
 
-	pose_dir = data_prefix  + data_name + "poseTSDF/";
-	frame_dir = data_prefix + data_name + "frameTSDF/";
-
 	data_dir = data_prefix + data_name;
+	pose_dir = data_dir + "poseTSDF/";
+	frame_dir = data_dir + "frameTSDF/";
+
 
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
 #else
 	fused_dir = data_dir + "depthTSDF/";
-  SystemCommand( "mkdir -p " + fused_dir);
 #endif
+
+  SystemCommand( "mkdir -p " + fused_dir);
+  SystemCommand( "mkdir -p " + pose_dir);
+  SystemCommand( "mkdir -p " + frame_dir);
 
 	file_index = param_start_index;
 
