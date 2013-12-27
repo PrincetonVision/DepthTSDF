@@ -531,7 +531,7 @@ void KFusion::Raycast_2(){
 #endif
 
 bool KFusion::Track() {
-#ifdef INITIAL_POSE
+#ifdef INITIAL_POSE_
     const Matrix4 invK = getInverseCameraMatrix(configuration.camera);
 
     vector<dim3> grids;

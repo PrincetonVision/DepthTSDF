@@ -408,10 +408,10 @@ void display(void){
 
 #if 1
     // ICP on
-    // extrinsic on
     integrate = kfusion.Track();
     Stats.sample("track");
 
+    cout << kfusion.pose << endl;
     pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
 
