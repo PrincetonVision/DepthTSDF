@@ -232,11 +232,10 @@ bool GetExtrinsicData(string file_name, vector<Matrix4> *poses) {
 	for (int i = 0; i < image_list.size(); ++i) {
 		Matrix4 m;
 		for (int d = 0; d < 3; ++d) {
-			int iret;
-			iret = fscanf(fp, "%f", &m.data[d].x);
-			iret = fscanf(fp, "%f", &m.data[d].y);
-			iret = fscanf(fp, "%f", &m.data[d].z);
-			iret = fscanf(fp, "%f", &m.data[d].w);
+			if (fscanf(fp, "%f", &m.data[d].x));
+			if (fscanf(fp, "%f", &m.data[d].y));
+			if (fscanf(fp, "%f", &m.data[d].z));
+			if (fscanf(fp, "%f", &m.data[d].w));
 		}
 		m.data[3].x = m.data[3].y = m.data[3].z = 0.f;
 		m.data[3].w = 1.f;
@@ -337,7 +336,7 @@ void display(void){
             return;
     	}
 
-#ifdef INITIAL_POSE_
+#ifdef INITIAL_POSE
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
     	if (file_index > 0 && file_index != param_start_index) {
@@ -360,7 +359,7 @@ void display(void){
     		exit(0);
     	}
 
-#ifdef INITIAL_POSE_
+#ifdef INITIAL_POSE
 		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
 		kfusion.pose = kfusion.pose * delta;
 #endif
@@ -400,7 +399,7 @@ void display(void){
 #endif
 
 
-#if 0
+#if 1
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
@@ -412,7 +411,7 @@ void display(void){
     pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
 
-#if 1
+#if 0
     // ICP on
     integrate = kfusion.Track();
     Stats.sample("track");
@@ -472,7 +471,25 @@ void display(void){
 
 				SaveFusedDepthFile();
 
-							cout << "THR" << endl << endl;
+				cout << "THR" << endl << endl;
+
+#if 0
+// volume saving
+				string vol_fn = fused_dir + "volume.txt";
+				FILE *fpv = fopen(vol_fn.c_str(), "w");
+
+				for (uint x = 0; x < kfusion.integration.size.x; ++x) {
+					cout << x << endl;
+					for (uint y = 0; y < kfusion.integration.size.y; ++y) {
+						for (uint z = 0; z < kfusion.integration.size.z; ++z) {
+							float2 dw = kfusion.ReadVolume(make_uint3(x,y,z));
+							fprintf(fpv, "%f %f ", dw.x, dw.y);
+						}
+					}
+				}
+
+				fclose(fpv);
+#endif
 				exit(0);
 			}
     }
@@ -748,16 +765,15 @@ int main(int argc, char ** argv) {
     cout << extrinsic_list[1] << endl;
 #endif
 
-    int i_ret;
     float fx, fy, cx, cy, ff;
 	string intrinsic = server_dir + "intrinsics.txt";
     FILE *fp = fopen(intrinsic.c_str(), "r");
-    i_ret = fscanf(fp, "%f", &fx);
-    i_ret = fscanf(fp, "%f", &ff);
-    i_ret = fscanf(fp, "%f", &cx);
-    i_ret = fscanf(fp, "%f", &ff);
-    i_ret = fscanf(fp, "%f", &fy);
-    i_ret = fscanf(fp, "%f", &cy);
+    if (fscanf(fp, "%f", &fx));
+    if (fscanf(fp, "%f", &ff));
+    if (fscanf(fp, "%f", &cx));
+    if (fscanf(fp, "%f", &ff));
+    if (fscanf(fp, "%f", &fy));
+    if (fscanf(fp, "%f", &cy));
 
     angle_threshold = (float) atan(cy / fy);
     translation_threshold = 1.0f * cy / fy;

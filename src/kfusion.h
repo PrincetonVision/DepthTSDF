@@ -35,6 +35,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdint.h>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include <vector_types.h>
@@ -509,6 +510,7 @@ struct KFusion {
     void Raycast(); // Raycast the reference images to track against from the current pose
     bool Track(); // Estimates new camera position based on the last depth map set and the volume
     void Integrate(); // Integrates the current depth map using the current camera pose
+    float2 ReadVolume(uint3 vox);
 };
 
 int printCUDAError(); // print the last error

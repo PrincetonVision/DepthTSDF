@@ -442,7 +442,7 @@ void KFusion::Init( const KFusionConfig & config ) {
 void KFusion::Reset(){
     dim3 block(32,16);
     dim3 grid = divup(dim3(integration.size.x, integration.size.y), block);
-    initVolume<<<grid, block>>>(integration, make_float2(-1.0f, 0.0f));
+    initVolume<<<grid, block>>>(integration, make_float2(1.0f, 0.0f));
  }
 
 void KFusion::Clear(){
@@ -531,7 +531,7 @@ void KFusion::Raycast_2(){
 #endif
 
 bool KFusion::Track() {
-#ifdef INITIAL_POSE_
+#ifdef INITIAL_POSE
     const Matrix4 invK = getInverseCameraMatrix(configuration.camera);
 
     vector<dim3> grids;
@@ -616,3 +616,15 @@ int printCUDAError() {
         std::cout << cudaGetErrorString(error) << std::endl;
     return error;
 }
+
+__global__ void read_volume(Volume vol, uint3 vox, float2 *d) {
+	*d = vol[vox];
+}
+
+float2 KFusion::ReadVolume(uint3 vox) {
+	float2 dw;
+	read_volume<<<1,1>>>(integration, vox, &dw);
+	return dw;
+}
+
+
