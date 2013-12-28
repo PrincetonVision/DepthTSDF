@@ -310,7 +310,11 @@ void ReComputeSecondPose() {
 		kfusion.setKinectDeviceDepth(depthImage[0].getDeviceImage());
 
 		kfusion.Track();
-		pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
+
+		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
+		itr->second = kfusion.pose;
+
+//		pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
 	}
 }
 
