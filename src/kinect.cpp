@@ -312,7 +312,10 @@ void ReComputeSecondPose() {
 		kfusion.Track();
 
 		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
+		cout << endl;
+		cout << itr->second << endl;
 		itr->second = kfusion.pose;
+		cout << itr->second << endl;
 
 //		pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
 	}
@@ -340,7 +343,7 @@ void display(void){
             return;
     	}
 
-#ifdef INITIAL_POSE
+#ifdef INITIAL_POSE_
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
     	if (file_index > 0 && file_index != param_start_index) {
@@ -363,7 +366,7 @@ void display(void){
     		exit(0);
     	}
 
-#ifdef INITIAL_POSE
+#ifdef INITIAL_POSE_
 		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
 		kfusion.pose = kfusion.pose * delta;
 #endif
@@ -403,7 +406,7 @@ void display(void){
 #endif
 
 
-#if 1
+#if 0
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
@@ -413,9 +416,8 @@ void display(void){
 
     kfusion.pose = temp;
     pose_map.insert(make_pair(file_index, kfusion.pose));
-#endif
 
-#if 0
+#else
     // ICP on
     integrate = kfusion.Track();
     Stats.sample("track");
