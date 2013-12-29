@@ -616,16 +616,3 @@ int printCUDAError() {
         std::cout << cudaGetErrorString(error) << std::endl;
     return error;
 }
-
-__global__ void read_volume(float2 *dw, Volume vol, uint3 vox) {
-	float2 data = vol[vox];
-	*dw = vol[vox];
-}
-
-void KFusion::ReadVolume(uint3 vox, float2 *dw) {
-	read_volume<<<1,1>>>(dw, integration, vox);
-	cout << vox.x << " " << vox.y << " " << vox.z << endl;
-	cout << (*dw).x << " " << (*dw).y << endl << endl;
-}
-
-
