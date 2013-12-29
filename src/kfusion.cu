@@ -617,14 +617,15 @@ int printCUDAError() {
     return error;
 }
 
-__global__ void read_volume(Volume vol, uint3 vox, float2 *d) {
-	*d = vol[vox];
+__global__ void read_volume(float2 *dw, Volume vol, uint3 vox) {
+	float2 data = vol[vox];
+	*dw = vol[vox];
 }
 
-float2 KFusion::ReadVolume(uint3 vox) {
-	float2 dw;
-	read_volume<<<1,1>>>(integration, vox, &dw);
-	return dw;
+void KFusion::ReadVolume(uint3 vox, float2 *dw) {
+	read_volume<<<1,1>>>(dw, integration, vox);
+	cout << vox.x << " " << vox.y << " " << vox.z << endl;
+	cout << (*dw).x << " " << (*dw).y << endl << endl;
 }
 
 

@@ -23,8 +23,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "kfusion.h"
 #include "helpers.h"
-//#include "interface.h"
-#include "perfstats.h"
 
 #include <iostream>
 #include <fstream>
@@ -34,6 +32,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <dirent.h>
 #include <cerrno>
 #include <cmath>
+#include <map>
 
 #include <png++/png.hpp>
 #include <jpeglib.h>
@@ -306,18 +305,12 @@ void ReComputeSecondPose() {
 		kfusion.pose = kfusion.pose * delta;
 
 		GetDepthData(depth_list[param_start_index + 1], (uint16_t *)depthImage[0].data());
-
 		kfusion.setKinectDeviceDepth(depthImage[0].getDeviceImage());
 
 		kfusion.Track();
 
 		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
-		cout << endl;
-		cout << itr->second << endl;
 		itr->second = kfusion.pose;
-		cout << itr->second << endl;
-
-//		pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
 	}
 }
 
@@ -381,20 +374,14 @@ void display(void){
     GetDepthData(depth_list[file_index], (uint16_t *)depthImage[0].data());
 
     glClear( GL_COLOR_BUFFER_BIT );
-    const double startFrame = Stats.start();
-    const double startProcessing = Stats.sample("kinect");
 
     kfusion.setKinectDeviceDepth(depthImage[0].getDeviceImage());
-    Stats.sample("raw to cooked");
 
 /*----------------------------------------------------------------------------*/
 #else
     glClear( GL_COLOR_BUFFER_BIT );
-    const double startFrame = Stats.start();
-    const double startProcessing = Stats.sample("kinect");
 
     kfusion.setKinectDeviceDepth(depthImage[GetKinectFrame()].getDeviceImage());
-    Stats.sample("raw to cooked");
 #endif
 
 
@@ -412,7 +399,6 @@ void display(void){
     Matrix4 temp = kfusion.pose;
 
     integrate = kfusion.Track();
-    Stats.sample("track");
 
     kfusion.pose = temp;
     pose_map.insert(make_pair(file_index, kfusion.pose));
@@ -420,7 +406,6 @@ void display(void){
 #else
     // ICP on
     integrate = kfusion.Track();
-    Stats.sample("track");
 
     pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
@@ -484,11 +469,21 @@ void display(void){
 				string vol_fn = fused_dir + "volume.txt";
 				FILE *fpv = fopen(vol_fn.c_str(), "w");
 
+				uint vol_size = kfusion.integration.size.x *
+						            kfusion.integration.size.y *
+						            kfusion.integration.size.z * sizeof(short2);
+
+				short2 *vol_data = (short2*) malloc(vol_size);
+				cudaMemcpy(vol_data, kfusion.integration.data, vol_size, cudaMemcpyDeviceToHost);
+
 				for (uint x = 0; x < kfusion.integration.size.x; ++x) {
 					cout << x << endl;
 					for (uint y = 0; y < kfusion.integration.size.y; ++y) {
 						for (uint z = 0; z < kfusion.integration.size.z; ++z) {
-							float2 dw = kfusion.ReadVolume(make_uint3(x,y,z));
+							short2 data = vol_data[x +
+							                       y * kfusion.integration.size.x +
+							                       z * kfusion.integration.size.x * kfusion.integration.size.y];
+							float2 dw = make_float2(data.x * 0.00003051944088f, data.y);
 							fprintf(fpv, "%f %f ", dw.x, dw.y);
 						}
 					}
@@ -510,7 +505,6 @@ void display(void){
     if((should_integrate && integrate && ((counter % integration_rate) == 0)) || reset){
         kfusion.Integrate();
         kfusion.Raycast();
-        Stats.sample("integrate");
         if(counter > 2) // use the first two frames to initialize
             reset = false;
     }
@@ -550,7 +544,6 @@ void display(void){
 
     cudaDeviceSynchronize();
 
-    Stats.sample("render");
 
 #ifdef RENDER_SCENE
     glClear(GL_COLOR_BUFFER_BIT);
@@ -568,10 +561,7 @@ void display(void){
     glDrawPixels(texModel);
 #endif
 
-    const double endProcessing = Stats.sample("draw");
 
-    Stats.sample("total", endProcessing - startFrame, PerfStats::TIME);
-    Stats.sample("total_proc", endProcessing - startProcessing, PerfStats::TIME);
 
     if(printCUDAError())
         exit(1);
@@ -579,8 +569,6 @@ void display(void){
     ++counter;
 
 //    if(counter % 50 == 0){
-//        Stats.print();
-//        Stats.reset();
 //        cout << endl;
 //    }
 

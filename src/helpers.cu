@@ -22,12 +22,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "kfusion.h"
-#include "perfstats.h"
 #include <iostream>
 
 using namespace std;
-
-PerfStats Stats;
 
 __global__ void setSphere( Volume volume, const float3 center, const float radius, const float val ){
     uint3 pos = make_uint3(thr2pos2());

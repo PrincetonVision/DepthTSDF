@@ -198,7 +198,7 @@ struct Volume {
 
     Volume() { size = make_uint3(0); dim = make_float3(1); data = NULL; }
 
-    __device__ float2 operator[]( const uint3 & pos ) const {
+    __host__ __device__ float2 operator[]( const uint3 & pos ) const {
         const short2 d = data[pos.x + pos.y * size.x + pos.z * size.x * size.y];
         return make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
     }
@@ -399,7 +399,7 @@ struct Image : public Allocator {
         return operator[](thr2pos2());
     }
 
-    __device__ T & operator[](const uint2 & pos ){
+    __host__ __device__ T & operator[](const uint2 & pos ){
         return static_cast<T *>(Allocator::data)[pos.x + size.x * pos.y];
     }
 
@@ -446,7 +446,7 @@ struct Image<T, Ref> : public Ref {
         return operator[](thr2pos2());
     }
 
-    __device__ T & operator[](const uint2 & pos ){
+    __host__ __device__ T & operator[](const uint2 & pos ){
         return static_cast<T *>(Ref::data)[pos.x + size.x * pos.y];
     }
 
@@ -510,7 +510,7 @@ struct KFusion {
     void Raycast(); // Raycast the reference images to track against from the current pose
     bool Track(); // Estimates new camera position based on the last depth map set and the volume
     void Integrate(); // Integrates the current depth map using the current camera pose
-    float2 ReadVolume(uint3 vox);
+    void ReadVolume(uint3 vox, float2 *dw);
 };
 
 int printCUDAError(); // print the last error
