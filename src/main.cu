@@ -68,6 +68,7 @@ SE3<float> initPose;
 float size;
 int counter = 0;
 int integration_rate = 1;
+bool stop_run = false;
 bool reset = true;
 bool should_integrate = true;
 bool render_texture = false;
@@ -336,7 +337,7 @@ void display(void){
             return;
     	}
 
-#ifdef INITIAL_POSE_
+#ifdef INITIAL_POSE
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
     	if (file_index > 0 && file_index != param_start_index) {
@@ -359,7 +360,7 @@ void display(void){
     		exit(0);
     	}
 
-#ifdef INITIAL_POSE_
+#ifdef INITIAL_POSE
 		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
 		kfusion.pose = kfusion.pose * delta;
 #endif
@@ -393,7 +394,7 @@ void display(void){
 #endif
 
 
-#if 0
+#if 1
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
@@ -754,9 +755,11 @@ int main(int argc, char ** argv) {
     AssignDepthList(image_list, &depth_list);
 
 #ifdef INITIAL_POSE
-//    GetExtrinsicData(extrinsic_list[extrinsic_list.size() - 1], &extrinsic_poses);
-    GetExtrinsicData(extrinsic_list[1], &extrinsic_poses);
-    cout << extrinsic_list[1] << endl;
+    string extrinsic_name = extrinsic_list[extrinsic_list.size() - 1];
+//    string extrinsic_name = extrinsic_list[1];
+
+    GetExtrinsicData(extrinsic_name, &extrinsic_poses);
+    cout << extrinsic_name << endl;
 #endif
 
     float fx, fy, cx, cy, ff;
@@ -877,8 +880,12 @@ int main(int argc, char ** argv) {
     glutMainLoop();
 #else
 
-    while(1)
+    while(1) {
     	display();
+
+    	if(stop_run)
+    		break;
+    }
 
 #endif
 

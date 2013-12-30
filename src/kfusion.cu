@@ -442,7 +442,7 @@ void KFusion::Init( const KFusionConfig & config ) {
 void KFusion::Reset(){
     dim3 block(32,16);
     dim3 grid = divup(dim3(integration.size.x, integration.size.y), block);
-    initVolume<<<grid, block>>>(integration, make_float2(-1.0f, 0.0f));
+    initVolume<<<grid, block>>>(integration, make_float2(1.0f, 0.0f));
  }
 
 void KFusion::Clear(){

@@ -33,12 +33,12 @@ set(kfusion_cuda_srcs
 	cutil_math.h
 	)
 	
-cuda_add_library(kfusion STATIC
-	${kfusion_cuda_srcs}
-	perfstats.h
-	OPTIONS
-	-O3
-	)
+#cuda_add_library(kfusion STATIC
+#	${kfusion_cuda_srcs}
+#	perfstats.h
+#	OPTIONS
+#	-O3
+#	)
 
 if (GLUT_FOUND)
 
@@ -53,10 +53,14 @@ if (GLUT_FOUND)
     if(FREENECT_FOUND)
         include_directories(${FREENECT_INCLUDE_PATHS})
         add_definitions(-DLIBFREENECT_INTERFACE)
-        add_executable(DepthTSDF
-            kinect.cpp
+        cuda_add_executable(DepthTSDF
+            	main.cu
+		kfusion.cu
+		helpers.cu
             )
-        target_link_libraries(DepthTSDF kfusion ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES} ${FREENECT_LIBRARIES} 
+        target_link_libraries(DepthTSDF 
+#		kfusion 
+		${GLUT_LIBRARIES} ${OPENGL_LIBRARIES} ${FREENECT_LIBRARIES} 
 		${JPEG_LIBRARIES} ${PNG_LIBRARIES}
 		) 
     else()
