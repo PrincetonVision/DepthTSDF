@@ -37,31 +37,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <png++/png.hpp>
 #include <jpeglib.h>
 
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#elif defined(WIN32)
-#define GLUT_NO_LIB_PRAGMA
-#include <glut.h>
-#else
-#include <GL/glut.h>
-#endif
-
-/*============================================================================*/
-#define SUN3D
-//#define RENDER_SCENE
-//#define LOCAL_RUN
-/*============================================================================*/
-
 using namespace std;
 using namespace TooN;
 
 KFusion kfusion;
-Image<uchar4, HostDevice> lightScene, trackModel, lightModel, texModel;
 Image<uint16_t, HostDevice> depthImage;
-Image<uchar3, HostDevice> rgbImage;
-
-const float3 light = make_float3(1, 1, -1.0);
-const float3 ambient = make_float3(0.1, 0.1, 0.1);
 
 SE3<float> initPose;
 
@@ -73,13 +53,9 @@ bool reset = true;
 bool should_integrate = true;
 bool render_texture = false;
 
-Image<float3, Device> pos, normals;
-Image<float, Device> dep;
-SE3<float> preTrans, trans, rot(makeVector(0.0, 0, 0, 0, 0, 0));
 bool redraw_big_view = false;
 
 /*============================================================================*/
-#ifdef SUN3D
 
 Image<uint16_t, HostDevice> fusedDepth;
 
@@ -175,7 +151,7 @@ void SaveFusedDepthFile() {
 	png::image<png::gray_pixel_16> img(kImageCols * 2, kImageRows * 2);
 
 	kfusion.Raycast_2();
-	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex_2, inverse(kfusion.pose));
+	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex_2);
 
 	for (int i = 0; i < kImageRows * 2; ++i) {
 		for (int j = 0; j < kImageCols * 2; ++j) {
@@ -201,7 +177,8 @@ void SaveFusedDepthFile() {
 
 #ifdef INITIAL_POSE
 #ifndef RESOLUTION_1280X960
-	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) + ".txt";
+	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) +
+			                ".txt";
 	string pose_txt_name  = pose_dir  + serial_txt;
 	string frame_txt_name = frame_dir + serial_txt;
 
@@ -210,7 +187,8 @@ void SaveFusedDepthFile() {
 	pose_file.open(pose_txt_name.c_str());
 	pose_file.precision(60);
 
-	for (map<int, Matrix4>::iterator it = pose_map.begin(); it != pose_map.end(); ++it) {
+	for (map<int, Matrix4>::iterator it = pose_map.begin(); it != pose_map.end();
+			++it) {
 		fprintf(fp_frame, "%d\n", it->first);
 		Matrix4 m = it->second;
 		for (int i = 0; i < 3; ++i) {
@@ -296,24 +274,23 @@ bool GetImageData(string file_name, unsigned char *data) {
   return true;
 }
 
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 
 void ReComputeSecondPose() {
 	if (param_start_index != depth_list.size() - 1) {
-		kfusion.ResetWeight(0.f);
-		GetDepthData(depth_list[param_start_index], (uint16_t *)depthImage.data());
-		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
-		kfusion.setPose(toMatrix4(initPose));
-		kfusion.Integrate();
-		kfusion.Raycast();
-		cudaDeviceSynchronize();
+//		kfusion.ResetWeight(0.f);
+//		GetDepthData(depth_list[param_start_index], (uint16_t *)depthImage.data());
+//		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
+//		kfusion.setPose(toMatrix4(initPose));
+//		kfusion.Integrate();
+//		kfusion.Raycast();
+//		cudaDeviceSynchronize();
 
 		Matrix4 delta = inverse(extrinsic_poses[param_start_index]) *
 				                    extrinsic_poses[param_start_index + 1];
 		kfusion.pose = kfusion.pose * delta;
-		GetDepthData(depth_list[param_start_index + 1], (uint16_t *)depthImage.data());
+		GetDepthData(depth_list[param_start_index + 1],
+				         (uint16_t *)depthImage.data());
 		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
 		kfusion.Track();
 		cudaDeviceSynchronize();
@@ -348,7 +325,8 @@ void display(void){
     	// T_12 = T_01^(-1) * T_02
     	// T_02 = T_01 * T_12;
     	if (file_index > 0 && file_index != param_start_index) {
-    		Matrix4 delta = inverse(extrinsic_poses[file_index - 1]) * extrinsic_poses[file_index];
+    		Matrix4 delta = inverse(extrinsic_poses[file_index - 1]) *
+    				            extrinsic_poses[file_index];
     		kfusion.pose = kfusion.pose * delta;
     	}
 #endif
@@ -373,7 +351,8 @@ void display(void){
     	}
 
 #ifdef INITIAL_POSE
-		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) * extrinsic_poses[file_index];
+		Matrix4 delta = inverse(extrinsic_poses[file_index + 1]) *
+				            extrinsic_poses[file_index];
 		kfusion.pose = kfusion.pose * delta;
 #endif
     }
@@ -381,9 +360,6 @@ void display(void){
     cout << file_index << " ";
     cout.flush();
 
-#ifdef RENDER_SCENE
-    GetImageData(image_list[file_index], (unsigned char *)rgbImage.data());
-#endif
     GetDepthData(depth_list[file_index], (uint16_t *)depthImage.data());
 
     glClear( GL_COLOR_BUFFER_BIT );
@@ -393,6 +369,7 @@ void display(void){
 /*----------------------------------------------------------------------------*/
 
 #if 0
+    // Just integrate and raycast first frame
     kfusion.Integrate();
     kfusion.Raycast();
     SaveFusedDepthFile();
@@ -416,15 +393,6 @@ void display(void){
 
     pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
-
-
-
-
-
-//************************************************************************************************************************************************************************************************
-
-#ifdef SUN3D
-/*============================================================================*/
 
     double z_angle;
     Vector<3, float> diff_t;
@@ -487,15 +455,16 @@ void display(void){
 						            kfusion.integration.size.z * sizeof(short2);
 
 				short2 *vol_data = (short2*) malloc(vol_size);
-				cudaMemcpy(vol_data, kfusion.integration.data, vol_size, cudaMemcpyDeviceToHost);
+				cudaMemcpy(vol_data, kfusion.integration.data, vol_size,
+						       cudaMemcpyDeviceToHost);
 
 				for (uint x = 0; x < kfusion.integration.size.x; ++x) {
 					cout << x << endl;
 					for (uint y = 0; y < kfusion.integration.size.y; ++y) {
 						for (uint z = 0; z < kfusion.integration.size.z; ++z) {
 							short2 data = vol_data[x +
-							                       y * kfusion.integration.size.x +
-							                       z * kfusion.integration.size.x * kfusion.integration.size.y];
+							    y * kfusion.integration.size.x +
+							    z * kfusion.integration.size.x * kfusion.integration.size.y];
 							float2 dw = make_float2(data.x * 0.00003051944088f, data.y);
 							fprintf(fpv, "%f %f ", dw.x, dw.y);
 						}
@@ -513,67 +482,16 @@ void display(void){
     else
     	--file_index;
 /*----------------------------------------------------------------------------*/
-#endif
 
-    if((should_integrate && integrate && ((counter % integration_rate) == 0)) || reset){
+    if((should_integrate && integrate && ((counter % integration_rate) == 0)) ||
+    		reset){
         kfusion.Integrate();
         kfusion.Raycast();
         if(counter > 2) // use the first two frames to initialize
             reset = false;
     }
 
-#ifdef RENDER_SCENE
-	renderLight( lightScene.getDeviceImage(), kfusion.inputVertex[0], kfusion.inputNormal[0], light, ambient );
-    renderLight( lightModel.getDeviceImage(), kfusion.vertex, kfusion.normal, light, ambient);
-    renderTrackResult(trackModel.getDeviceImage(), kfusion.reduction);
-    static int count = 4;
-    if(count > 3 || redraw_big_view){
-#ifdef SUN3D
-/*============================================================================*/
-      float3 xyz = kfusion.pose.get_translation();
-      float3 direction = kfusion.pose * make_float3(0, 0, 1) - xyz;
-      double angle = atan2(direction.x, direction.z);
-      rot = SE3<float>(makeVector(0, 0, 0, 0, angle, 0));
-
-      renderInput( pos, normals, dep, kfusion.integration,
-          toMatrix4( trans * rot * preTrans ) * getInverseCameraMatrix(kfusion.configuration.camera),
-          kfusion.configuration.nearPlane,
-          kfusion.configuration.farPlane,
-          kfusion.configuration.stepSize(),
-          kfusion.configuration.mu * 0.75);
-/*----------------------------------------------------------------------------*/
-#else
-      renderInput( pos, normals, dep, kfusion.integration, toMatrix4( trans * rot * preTrans ) * getInverseCameraMatrix(kfusion.configuration.camera * 2), kfusion.configuration.nearPlane, kfusion.configuration.farPlane, kfusion.configuration.stepSize(), 0.75 * kfusion.configuration.mu);
-#endif
-        count = 0;
-        redraw_big_view = false;
-    } else
-        count++;
-    if(render_texture)
-        renderTexture( texModel.getDeviceImage(), pos, normals, rgbImage.getDeviceImage(), getCameraMatrix(2*kfusion.configuration.camera) * inverse(kfusion.pose), light);
-    else
-        renderLight( texModel.getDeviceImage(), pos, normals, light, ambient);
-#endif
-
     cudaDeviceSynchronize();
-
-
-#ifdef RENDER_SCENE
-    glClear(GL_COLOR_BUFFER_BIT);
-    glRasterPos2i(0, 0);
-    glDrawPixels(lightScene);
-    glRasterPos2i(0, kImageRows);
-    glPixelZoom(1, -1);
-    glDrawPixels(rgbImage);
-    glRasterPos2i(kImageCols,0);
-    glDrawPixels(lightModel);
-    glRasterPos2i(kImageCols, kImageRows);
-    glDrawPixels(trackModel);
-    glRasterPos2i(kImageCols * 2, 0);
-    glPixelZoom(2, -2);
-    glDrawPixels(texModel);
-#endif
-
 
 
     if(printCUDAError())
@@ -581,88 +499,18 @@ void display(void){
 
     ++counter;
 
-//    if(counter % 50 == 0){
-//        cout << endl;
-//    }
-
-#ifdef RENDER_SCENE
-    glutSwapBuffers();
-#endif
-
 //    usleep(1000 * 500);
 }
 
-void idle(void){
-#ifndef SUN3D
-    if(KinectFrameAvailable())
-#endif
-        glutPostRedisplay();
-}
+////////////////////////////////////////////////////////////////////////////////
 
-void keys(unsigned char key, int x, int y){
-    switch(key){
-    case 'c':
-        kfusion.Reset();
-        kfusion.setPose(toMatrix4(initPose));
-        reset = true;
-        break;
-    case 'q':
-        exit(0);
-        break;
-    case 'i':
-        should_integrate = !should_integrate;
-        break;
-    case 't':
-        render_texture = !render_texture;
-        break;
-    }
-}
-
-void specials(int key, int x, int y){
-    switch(key){
-    case GLUT_KEY_LEFT:
-        rot = SE3<float>(makeVector(0.0, 0, 0, 0, 0.1, 0)) * rot;
-        break;
-    case GLUT_KEY_RIGHT:
-        rot = SE3<float>(makeVector(0.0, 0, 0, 0, -0.1, 0)) * rot;
-        break;
-    case GLUT_KEY_UP:
-        rot *= SE3<float>(makeVector(0.0, 0, 0, -0.1, 0, 0));
-        break;
-    case GLUT_KEY_DOWN:
-        rot *= SE3<float>(makeVector(0.0, 0, 0, 0.1, 0, 0));
-        break;
-    }
-    redraw_big_view = true;
-}
-
-void reshape(int width, int height){
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glViewport(0, 0, width, height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glColor3f(1.0f,1.0f,1.0f);
-    glRasterPos2f(-1, 1);
-    glOrtho(-0.375, width-0.375, height-0.375, -0.375, -1 , 1); //offsets to make (0,0) the top left pixel (rather than off the display)
-    glPixelZoom(1,-1);
-}
-
-void exitFunc(void){
-#ifndef SUN3D
-    CloseKinect();
-#endif
-    kfusion.Clear();
-    cudaDeviceReset();
-}
-
-#ifdef SUN3D
-/*============================================================================*/
 int GetTimeStamp(const string &file_name) {
   return atoi(file_name.substr(
               file_name.size() - param_file_name_length + param_time_stamp_pose,
               param_time_stamp_length).c_str());
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
   vector<string> depth_temp;
@@ -698,17 +546,17 @@ void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
     }
   }
 }
-/*----------------------------------------------------------------------------*/
-#endif
+
+////////////////////////////////////////////////////////////////////////////////
 
 void SystemCommand(const string str) {
   if (system(str.c_str()))
     return;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char ** argv) {
-#ifdef SUN3D
-/*============================================================================*/
 
 	cout << "=================================================================" << endl;
 
@@ -788,7 +636,6 @@ int main(int argc, char ** argv) {
     translation_threshold = 1.0f * cy / fy;
 
 /*----------------------------------------------------------------------------*/
-#endif
 
     KFusionConfig config;
 
@@ -810,14 +657,11 @@ int main(int argc, char ** argv) {
     uint2 input_size = make_uint2(kImageCols, kImageRows);
     config.inputSize = input_size;
 
-#ifdef SUN3D
     config.camera =  make_float4(fx, fy, cx, cy);
 
     config.rsme_threshold = param_rsme_threshold;
 //    config.track_threshold = 0.7f;
-#else
-    config.camera =  make_float4(531.15/2, 531.15/2, 640/4, 480/4);
-#endif
+
     // config.iterations is a vector<int>, the length determines
     // the number of levels to be used in tracking
     // push back more then 3 iteraton numbers to get more levels.
@@ -827,22 +671,12 @@ int main(int argc, char ** argv) {
 
     initPose = SE3<float>(makeVector(size/2, size/2, 0, 0, 0, 0));
 
-#ifdef RENDER_SCENE
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE );
-    glutInitWindowSize(config.inputSize.x * 2 + kImageCols * 2, max(config.inputSize.y * 2, kImageRows * 2));
-    glutCreateWindow("kfusion");
-#endif
-
     kfusion.Init(config);
 
     // input buffers
     depthImage.alloc(input_size);
-    rgbImage.alloc(input_size);
 
     // render buffers
-    lightScene.alloc(input_size), trackModel.alloc(input_size), lightModel.alloc(input_size);
-    pos.alloc(input_size), normals.alloc(input_size), dep.alloc(input_size), texModel.alloc(input_size * 2);
 
     if(printCUDAError()) {
         cudaDeviceReset();
@@ -850,7 +684,6 @@ int main(int argc, char ** argv) {
     }
 
     memset(depthImage.data(), 0, depthImage.size.x * depthImage.size.y * sizeof(uint16_t));
-    memset(rgbImage.data(), 0, rgbImage.size.x*rgbImage.size.y * sizeof(uchar3));
 
 #ifdef RESOLUTION_1280X960
     fusedDepth.alloc(input_size * 2);
@@ -860,26 +693,6 @@ int main(int argc, char ** argv) {
 
     kfusion.setPose(toMatrix4(initPose));
 
-    // model rendering parameters
-#ifdef SUN3D
-    preTrans = SE3<float>::exp(makeVector(0.0, 0, -size, 0, 0, 0));
-    trans = SE3<float>::exp(makeVector(0.5, 0.5, 0.5, 0, 0, 0) * size);
-#else
-    preTrans = SE3<float>::exp(makeVector(0.0, 0, -size, 0, 0, 0));
-    trans = SE3<float>::exp(makeVector(0.5, 0.5, 0.5, 0, 0, 0) * size);
-#endif
-
-#ifdef RENDER_SCENE
-    atexit(exitFunc);
-    glutDisplayFunc(display);
-    glutKeyboardFunc(keys);
-    glutSpecialFunc(specials);
-    glutReshapeFunc(reshape);
-    glutIdleFunc(idle);
-
-    glutMainLoop();
-#else
-
     while(1) {
     	display();
 
@@ -887,11 +700,8 @@ int main(int argc, char ** argv) {
     		break;
     }
 
-#endif
-
-#ifndef SUN3D
-    CloseKinect();
-#endif
-
     return 0;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
