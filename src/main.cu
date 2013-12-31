@@ -57,7 +57,7 @@ using namespace TooN;
 
 KFusion kfusion;
 Image<uchar4, HostDevice> lightScene, trackModel, lightModel, texModel;
-Image<uint16_t, HostDevice> depthImage[2];
+Image<uint16_t, HostDevice> depthImage;
 Image<uchar3, HostDevice> rgbImage;
 
 const float3 light = make_float3(1, 1, -1.0);
@@ -186,7 +186,8 @@ void SaveFusedDepthFile() {
 #else
 	png::image<png::gray_pixel_16> img(kImageCols, kImageRows);
 
-	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex, inverse(kfusion.pose));
+	renderFusedMap(fusedDepth.getDeviceImage(), kfusion.vertex);
+	cudaDeviceSynchronize();
 
 	for (int i = 0; i < kImageRows; ++i) {
 		for (int j = 0; j < kImageCols; ++j) {
@@ -297,30 +298,35 @@ bool GetImageData(string file_name, unsigned char *data) {
 
 #endif
 
-/*----------------------------------------------------------------------------*/
+////////////////////////////////////////////////////////////////////////////////
 
 void ReComputeSecondPose() {
 	if (param_start_index != depth_list.size() - 1) {
+		kfusion.ResetWeight(0.f);
+		GetDepthData(depth_list[param_start_index], (uint16_t *)depthImage.data());
+		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
+		kfusion.setPose(toMatrix4(initPose));
+		kfusion.Integrate();
+		kfusion.Raycast();
+		cudaDeviceSynchronize();
+
 		Matrix4 delta = inverse(extrinsic_poses[param_start_index]) *
 				                    extrinsic_poses[param_start_index + 1];
 		kfusion.pose = kfusion.pose * delta;
-
-		GetDepthData(depth_list[param_start_index + 1], (uint16_t *)depthImage[0].data());
-		kfusion.setKinectDeviceDepth(depthImage[0].getDeviceImage());
-
+		GetDepthData(depth_list[param_start_index + 1], (uint16_t *)depthImage.data());
+		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
 		kfusion.Track();
+		cudaDeviceSynchronize();
 
 		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
 		itr->second = kfusion.pose;
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 void display(void){
     static bool integrate = true;
-
-/*============================================================================*/
-
-#ifdef SUN3D
 
     if (param_mode == KINFU_FORWARD) {
     	if (file_index == param_start_index + param_frame_threshold ||
@@ -332,6 +338,7 @@ void display(void){
             kfusion.setPose(toMatrix4(initPose));
 
             kfusion.Raycast();
+        		cudaDeviceSynchronize();
 
     		cout << "IDX" << endl << endl;
             return;
@@ -351,8 +358,13 @@ void display(void){
     		kfusion.Integrate();
     		kfusion.setPose(toMatrix4(initPose));
     		kfusion.Raycast();
+    		cudaDeviceSynchronize();
 
     		ReComputeSecondPose();
+
+    		kfusion.setPose(toMatrix4(initPose));
+    		kfusion.Raycast();
+    		cudaDeviceSynchronize();
 
     		SaveFusedDepthFile();
 
@@ -372,19 +384,13 @@ void display(void){
 #ifdef RENDER_SCENE
     GetImageData(image_list[file_index], (unsigned char *)rgbImage.data());
 #endif
-    GetDepthData(depth_list[file_index], (uint16_t *)depthImage[0].data());
+    GetDepthData(depth_list[file_index], (uint16_t *)depthImage.data());
 
     glClear( GL_COLOR_BUFFER_BIT );
 
-    kfusion.setKinectDeviceDepth(depthImage[0].getDeviceImage());
+    kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
 
 /*----------------------------------------------------------------------------*/
-#else
-    glClear( GL_COLOR_BUFFER_BIT );
-
-    kfusion.setKinectDeviceDepth(depthImage[GetKinectFrame()].getDeviceImage());
-#endif
-
 
 #if 0
     kfusion.Integrate();
@@ -451,6 +457,7 @@ void display(void){
 				kfusion.setPose(toMatrix4(initPose));
 
 				kfusion.Raycast();
+				cudaDeviceSynchronize();
 
 				cout << "THR" << endl << endl;
 				return;
@@ -458,8 +465,13 @@ void display(void){
 				kfusion.Integrate();
 				kfusion.setPose(toMatrix4(initPose));
 				kfusion.Raycast();
+				cudaDeviceSynchronize();
 
     		ReComputeSecondPose();
+
+    		kfusion.setPose(toMatrix4(initPose));
+    		kfusion.Raycast();
+    		cudaDeviceSynchronize();
 
 				SaveFusedDepthFile();
 
@@ -825,8 +837,7 @@ int main(int argc, char ** argv) {
     kfusion.Init(config);
 
     // input buffers
-    depthImage[0].alloc(input_size);
-    depthImage[1].alloc(input_size);
+    depthImage.alloc(input_size);
     rgbImage.alloc(input_size);
 
     // render buffers
@@ -838,24 +849,13 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    memset(depthImage[0].data(), 0, depthImage[0].size.x*depthImage[0].size.y * sizeof(uint16_t));
-    memset(depthImage[1].data(), 0, depthImage[1].size.x*depthImage[1].size.y * sizeof(uint16_t));
+    memset(depthImage.data(), 0, depthImage.size.x * depthImage.size.y * sizeof(uint16_t));
     memset(rgbImage.data(), 0, rgbImage.size.x*rgbImage.size.y * sizeof(uchar3));
-
-#ifdef SUN3D
 
 #ifdef RESOLUTION_1280X960
     fusedDepth.alloc(input_size * 2);
 #else
     fusedDepth.alloc(input_size);
-#endif
-
-#else
-    uint16_t * buffers[2] = {depthImage[0].data(), depthImage[1].data()};
-    if(InitKinect(buffers, (unsigned char *)rgbImage.data())){
-        cudaDeviceReset();
-        return 1;
-    }
 #endif
 
     kfusion.setPose(toMatrix4(initPose));

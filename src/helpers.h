@@ -52,7 +52,7 @@ void renderTrackResult( Image<uchar4> out, const Image<TrackData> & data );
 void renderVolumeLight( Image<uchar4> out, const Volume & volume, const Matrix4 view, const float nearPlane, const float farPlane, const float largestep, const float3 light, const float3 ambient );
 void renderInput( Image<float3> pos3D, Image<float3> normal, Image<float> depth, const Volume volume, const Matrix4 view, const float nearPlane, const float farPlane, const float step, const float largestep);
 void renderTexture( Image<uchar4> out, const Image<float3> & vertex, const Image<float3> & normal, const Image<uchar3> & texture, const Matrix4 & texproj, const float3 light);
-void renderFusedMap(Image<uint16_t> out, const Image<float3> & vertex, const Matrix4 &invPose);
+void renderFusedMap(Image<uint16_t> out, const Image<float3> & vertex);
 
 // simple wrappers around the kfusion.h kernel functions
 void initVolumeWrap( Volume volume, const float val );

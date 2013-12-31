@@ -499,6 +499,7 @@ struct KFusion {
 
     // high level API to run a simple tracking - reconstruction loop
     void Reset(); // removes all reconstruction information
+    void ResetWeight(float weight);
 
     template<typename A>
     void setDepth( const Image<float, A> & depth  ){ // passes in a metric depth buffer as float array

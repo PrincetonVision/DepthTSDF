@@ -35,6 +35,15 @@ __global__ void initVolume( Volume volume, const float2 val ){
         volume.set(pos, val);
 }
 
+__global__ void initVolumeWeight(Volume volume, const float weight ){
+	uint3 pos = make_uint3(thr2pos2());
+	for (pos.z = 0; pos.z < volume.size.z; ++pos.z) {
+		float2 val = volume[pos];
+		val.y = weight;
+		volume.set(pos, val);
+	}
+}
+
 __global__ void raycast( Image<float3> pos3D, Image<float3> normal, const Volume volume, const Matrix4 view, const float nearPlane, const float farPlane, const float step, const float largestep){
     const uint2 pos = thr2pos2();
 
@@ -177,12 +186,12 @@ __global__ void generate_gaussian(Image<float> out, float delta, int radius) {
     out[make_uint2(threadIdx.x,0)] = __expf(-(x * x) / (2 * delta * delta));
 }
 
-__global__ void track( Image<TrackData> output, const Image<float3> inVertex, const Image<float3> inNormal , const Image<float3> refVertex, const Image<float3> refNormal, const Matrix4 Ttrack, const Matrix4 view, const float dist_threshold, const float normal_threshold ) {
+__global__ void track( Image<TrackData> reduction, const Image<float3> inVertex, const Image<float3> inNormal , const Image<float3> refVertex, const Image<float3> refNormal, const Matrix4 Ttrack, const Matrix4 view, const float dist_threshold, const float normal_threshold ) {
     const uint2 pixel = thr2pos2();
     if(pixel.x >= inVertex.size.x || pixel.y >= inVertex.size.y )
         return;
 
-    TrackData & row = output[pixel];
+    TrackData & row = reduction[pixel];
 
     if(inNormal[pixel].x == INVALID ){
         row.result = -1;
@@ -443,7 +452,13 @@ void KFusion::Reset(){
     dim3 block(32,16);
     dim3 grid = divup(dim3(integration.size.x, integration.size.y), block);
     initVolume<<<grid, block>>>(integration, make_float2(1.0f, 0.0f));
- }
+}
+
+void KFusion::ResetWeight(float weight){
+    dim3 block(32,16);
+    dim3 grid = divup(dim3(integration.size.x, integration.size.y), block);
+    initVolumeWeight<<<grid, block>>>(integration, weight);
+}
 
 void KFusion::Clear(){
     integration.release();
