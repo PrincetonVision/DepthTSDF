@@ -46,11 +46,7 @@ Image<uint16_t, HostDevice> depthImage;
 SE3<float> initPose;
 
 float size;
-int counter = 0;
-int integration_rate = 1;
 bool stop_run = false;
-bool reset = true;
-bool should_integrate = true;
 bool render_texture = false;
 
 bool redraw_big_view = false;
@@ -62,10 +58,10 @@ Image<uint16_t, HostDevice> fusedDepth;
 ////////////////////////////////////////////////////////////////////////////////
 // global parameter
 
-int   param_start_index = 200;
+int   param_start_index = -1;
 
 int   param_volume_size = 640;
-float param_volume_dimension = 8.f;
+float param_volume_dimension = 4.f;
 
 int   param_frame_threshold = 200;
 float param_angle_factor = 1.f;
@@ -176,7 +172,6 @@ void SaveFusedDepthFile() {
 	img.write(fused_full_name.c_str());
 
 #ifdef INITIAL_POSE
-#ifndef RESOLUTION_1280X960
 	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) +
 			                ".txt";
 	string pose_txt_name  = pose_dir  + serial_txt;
@@ -200,7 +195,6 @@ void SaveFusedDepthFile() {
 	}
 	fclose(fp_frame);
 	pose_file.close();
-#endif
 #endif
 }
 
@@ -289,26 +283,34 @@ void ReComputeSecondPose() {
 		Matrix4 delta = inverse(extrinsic_poses[param_start_index]) *
 				                    extrinsic_poses[param_start_index + 1];
 		kfusion.pose = kfusion.pose * delta;
+
 		GetDepthData(depth_list[param_start_index + 1],
 				         (uint16_t *)depthImage.data());
 		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
+		cudaDeviceSynchronize();
+
 		kfusion.Track();
 		cudaDeviceSynchronize();
 
+#ifndef FIRST_FRAME_ONLY
 		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
 		itr->second = kfusion.pose;
+#else
+    pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
+#endif
 	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void display(void){
-    static bool integrate = true;
+  static bool first_frame = true;
+	static bool integrate = true;
 
     if (param_mode == KINFU_FORWARD) {
     	if (file_index == param_start_index + param_frame_threshold ||
     			file_index == image_list.size()) {
-            kfusion.Integrate();
+//            kfusion.Integrate();
 
             param_mode = KINFU_BACKWARD;
             file_index = param_start_index - 1;
@@ -333,7 +335,7 @@ void display(void){
     } else {
     	if (file_index == param_start_index - param_frame_threshold ||
     			file_index == -1) {
-    		kfusion.Integrate();
+//    		kfusion.Integrate();
     		kfusion.setPose(toMatrix4(initPose));
     		kfusion.Raycast();
     		cudaDeviceSynchronize();
@@ -346,7 +348,7 @@ void display(void){
 
     		SaveFusedDepthFile();
 
-            cout << "IDX" << endl << endl;
+        cout << "IDX" << endl << endl;
     		exit(0);
     	}
 
@@ -418,7 +420,7 @@ void display(void){
     		z_angle > angle_threshold * param_angle_factor ||
     		norm(diff_t) > translation_threshold * param_translation_factor ) {
     	if (param_mode == KINFU_FORWARD) {
-				kfusion.Integrate();
+//				kfusion.Integrate();
 
 				param_mode = KINFU_BACKWARD;
 				file_index = param_start_index - 1;
@@ -430,7 +432,7 @@ void display(void){
 				cout << "THR" << endl << endl;
 				return;
 			} else {
-				kfusion.Integrate();
+//				kfusion.Integrate();
 				kfusion.setPose(toMatrix4(initPose));
 				kfusion.Raycast();
 				cudaDeviceSynchronize();
@@ -483,12 +485,14 @@ void display(void){
     	--file_index;
 /*----------------------------------------------------------------------------*/
 
-    if((should_integrate && integrate && ((counter % integration_rate) == 0)) ||
-    		reset){
+#ifndef FIRST_FRAME_ONLY
+    if(integrate || first_frame){
+#else
+    if(1){
+#endif
         kfusion.Integrate();
         kfusion.Raycast();
-        if(counter > 2) // use the first two frames to initialize
-            reset = false;
+        first_frame = false;
     }
 
     cudaDeviceSynchronize();
@@ -496,8 +500,6 @@ void display(void){
 
     if(printCUDAError())
         exit(1);
-
-    ++counter;
 
 //    usleep(1000 * 500);
 }
@@ -615,8 +617,8 @@ int main(int argc, char ** argv) {
     AssignDepthList(image_list, &depth_list);
 
 #ifdef INITIAL_POSE
-    string extrinsic_name = extrinsic_list[extrinsic_list.size() - 1];
-//    string extrinsic_name = extrinsic_list[1];
+//    string extrinsic_name = extrinsic_list[extrinsic_list.size() - 1];
+    string extrinsic_name = extrinsic_list[1];
 
     GetExtrinsicData(extrinsic_name, &extrinsic_poses);
     cout << extrinsic_name << endl;
@@ -639,32 +641,22 @@ int main(int argc, char ** argv) {
 
     KFusionConfig config;
 
-    // it is enough now to set the volume resolution once.
-    // everything else is derived from that.
-    // config.volumeSize = make_uint3(64);
-    // config.volumeSize = make_uint3(128);
-    // config.volumeSize = make_uint3(256);
     config.volumeSize = make_uint3(param_volume_size);
 
     // these are physical dimensions in meters
     config.volumeDimensions = make_float3(size);
     config.nearPlane = 0.4f;
-    config.farPlane = 10.0f;
+    config.farPlane = 5.0f;
     config.mu = 0.1;
     config.combinedTrackAndReduce = false;
 
-    // change the following parameters for using 640 x 480 input images
     uint2 input_size = make_uint2(kImageCols, kImageRows);
     config.inputSize = input_size;
 
-    config.camera =  make_float4(fx, fy, cx, cy);
+    config.camera = make_float4(fx, fy, cx, cy);
 
     config.rsme_threshold = param_rsme_threshold;
-//    config.track_threshold = 0.7f;
 
-    // config.iterations is a vector<int>, the length determines
-    // the number of levels to be used in tracking
-    // push back more then 3 iteraton numbers to get more levels.
     config.iterations[0] = 10;
     config.iterations[1] = 5;
     config.iterations[2] = 4;
