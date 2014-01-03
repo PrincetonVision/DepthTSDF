@@ -303,6 +303,58 @@ void ReComputeSecondPose() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+int GetTimeStamp(const string &file_name) {
+  return atoi(file_name.substr(
+              file_name.size() - param_file_name_length + param_time_stamp_pose,
+              param_time_stamp_length).c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
+  vector<string> depth_temp;
+  depth_temp.swap(*depth_list);
+  depth_list->clear();
+  depth_list->reserve(image_list.size());
+
+  int idx = 0;
+  int depth_time = GetTimeStamp(depth_temp[idx]);
+  int time_low = depth_time;
+
+
+  for (unsigned int i = 0; i < image_list.size(); ++i) {
+    int image_time = GetTimeStamp(image_list[i]);
+
+    while (depth_time < image_time) {
+      if (idx == depth_temp.size() - 1)
+        break;
+
+      time_low = depth_time;
+      depth_time = GetTimeStamp(depth_temp[++idx]);
+    }
+
+    if (idx == 0 && depth_time > image_time) {
+      depth_list->push_back(depth_temp[idx]);
+      continue;
+    }
+
+    if (abs(image_time - time_low) < abs(depth_time - image_time)) {
+      depth_list->push_back(depth_temp[idx-1]);
+    } else {
+      depth_list->push_back(depth_temp[idx]);
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void SystemCommand(const string str) {
+  if (system(str.c_str()))
+    return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void display(void){
   static bool first_frame = true;
 	static bool integrate = true;
@@ -379,7 +431,7 @@ void display(void){
 #endif
 
 
-#if 1
+#if 0
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
@@ -506,58 +558,6 @@ void display(void){
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int GetTimeStamp(const string &file_name) {
-  return atoi(file_name.substr(
-              file_name.size() - param_file_name_length + param_time_stamp_pose,
-              param_time_stamp_length).c_str());
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
-  vector<string> depth_temp;
-  depth_temp.swap(*depth_list);
-  depth_list->clear();
-  depth_list->reserve(image_list.size());
-
-  int idx = 0;
-  int depth_time = GetTimeStamp(depth_temp[idx]);
-  int time_low = depth_time;
-
-
-  for (unsigned int i = 0; i < image_list.size(); ++i) {
-    int image_time = GetTimeStamp(image_list[i]);
-
-    while (depth_time < image_time) {
-      if (idx == depth_temp.size() - 1)
-        break;
-
-      time_low = depth_time;
-      depth_time = GetTimeStamp(depth_temp[++idx]);
-    }
-
-    if (idx == 0 && depth_time > image_time) {
-      depth_list->push_back(depth_temp[idx]);
-      continue;
-    }
-
-    if (abs(image_time - time_low) < abs(depth_time - image_time)) {
-      depth_list->push_back(depth_temp[idx-1]);
-    } else {
-      depth_list->push_back(depth_temp[idx]);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-void SystemCommand(const string str) {
-  if (system(str.c_str()))
-    return;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
@@ -603,9 +603,9 @@ int main(int argc, char ** argv) {
 	fused_dir = data_dir + "depthTSDF/";
 #endif
 
-  SystemCommand( "mkdir -p " + fused_dir);
-  SystemCommand( "mkdir -p " + pose_dir);
-  SystemCommand( "mkdir -p " + frame_dir);
+  SystemCommand("mkdir -p " + fused_dir);
+  SystemCommand("mkdir -p " + pose_dir);
+  SystemCommand("mkdir -p " + frame_dir);
 
 	file_index = param_start_index;
 
