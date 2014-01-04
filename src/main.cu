@@ -63,7 +63,7 @@ int   param_start_index = -1;
 int   param_volume_size = 640;
 float param_volume_dimension = 4.f;
 
-int   param_frame_threshold = 200;
+int   param_frame_threshold = 17;
 float param_angle_factor = 1.f;
 float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
@@ -270,38 +270,6 @@ bool GetImageData(string file_name, unsigned char *data) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void ReComputeSecondPose() {
-	if (param_start_index != depth_list.size() - 1) {
-//		kfusion.ResetWeight(0.f);
-//		GetDepthData(depth_list[param_start_index], (uint16_t *)depthImage.data());
-//		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
-//		kfusion.setPose(toMatrix4(initPose));
-//		kfusion.Integrate();
-//		kfusion.Raycast();
-//		cudaDeviceSynchronize();
-
-		Matrix4 delta = inverse(extrinsic_poses[param_start_index]) *
-				                    extrinsic_poses[param_start_index + 1];
-		kfusion.pose = kfusion.pose * delta;
-
-		GetDepthData(depth_list[param_start_index + 1],
-				         (uint16_t *)depthImage.data());
-		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
-		cudaDeviceSynchronize();
-
-		kfusion.Track();
-		cudaDeviceSynchronize();
-
-		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
-		if (itr != pose_map.end())
-			itr->second = kfusion.pose;
-		else
-			pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 int GetTimeStamp(const string &file_name) {
   return atoi(file_name.substr(
               file_name.size() - param_file_name_length + param_time_stamp_pose,
@@ -350,6 +318,38 @@ void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
 void SystemCommand(const string str) {
   if (system(str.c_str()))
     return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void ReComputeSecondPose() {
+	if (param_start_index != depth_list.size() - 1) {
+//		kfusion.ResetWeight(0.f);
+//		GetDepthData(depth_list[param_start_index], (uint16_t *)depthImage.data());
+//		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
+//		kfusion.setPose(toMatrix4(initPose));
+//		kfusion.Integrate();
+//		kfusion.Raycast();
+//		cudaDeviceSynchronize();
+
+		Matrix4 delta = inverse(extrinsic_poses[param_start_index]) *
+				                    extrinsic_poses[param_start_index + 1];
+		kfusion.pose = kfusion.pose * delta;
+
+		GetDepthData(depth_list[param_start_index + 1],
+				         (uint16_t *)depthImage.data());
+		kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
+		cudaDeviceSynchronize();
+
+		kfusion.Track();
+		cudaDeviceSynchronize();
+
+		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
+		if (itr != pose_map.end())
+			itr->second = kfusion.pose;
+		else
+			pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
