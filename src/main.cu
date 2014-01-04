@@ -63,7 +63,7 @@ int   param_start_index = -1;
 int   param_volume_size = 640;
 float param_volume_dimension = 4.f;
 
-int   param_frame_threshold = 2;
+int   param_frame_threshold = 3;
 float param_angle_factor = 1.f;
 float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
@@ -698,4 +698,4 @@ int main(int argc, char ** argv) {
 ////////////////////////////////////////////////////////////////////////////////
 
 // sh run_sh ~/data/sun3d/ ~/data/sun3d/ hotel_umd/maryland_hotel3/
-
+// scp maryland_hotel3.tar.gz alan@172.17.0.69:/home/alan/data/sun3d/hotel_umd/
