@@ -63,7 +63,7 @@ int   param_start_index = -1;
 int   param_volume_size = 640;
 float param_volume_dimension = 4.f;
 
-int   param_frame_threshold = 14;
+int   param_frame_threshold = 200;
 float param_angle_factor = 1.f;
 float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
@@ -292,12 +292,11 @@ void ReComputeSecondPose() {
 		kfusion.Track();
 		cudaDeviceSynchronize();
 
-#ifndef FIRST_FRAME_ONLY
 		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
-		itr->second = kfusion.pose;
-#else
-    pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
-#endif
+		if (itr != pose_map.end())
+			itr->second = kfusion.pose;
+		else
+			pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
 	}
 }
 
@@ -439,13 +438,11 @@ void display(void){
     integrate = kfusion.Track();
 
     kfusion.pose = temp;
-    pose_map.insert(make_pair(file_index, kfusion.pose));
 
 #else
     // ICP on
     integrate = kfusion.Track();
 
-    pose_map.insert(make_pair(file_index, kfusion.pose));
 #endif
 
     double z_angle;
@@ -530,6 +527,8 @@ void display(void){
 				exit(0);
 			}
     }
+
+    pose_map.insert(make_pair(file_index, kfusion.pose));
 
     if (param_mode == KINFU_FORWARD)
     	++file_index;
@@ -684,6 +683,7 @@ int main(int argc, char ** argv) {
 #endif
 
     kfusion.setPose(toMatrix4(initPose));
+    pose_map.insert(make_pair(file_index, kfusion.pose));
 
     while(1) {
     	display();
