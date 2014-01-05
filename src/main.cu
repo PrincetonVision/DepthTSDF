@@ -47,9 +47,6 @@ SE3<float> initPose;
 
 float size;
 bool stop_run = false;
-bool render_texture = false;
-
-bool redraw_big_view = false;
 
 /*============================================================================*/
 
@@ -63,7 +60,7 @@ int   param_start_index = -1;
 int   param_volume_size = 640;
 float param_volume_dimension = 4.f;
 
-int   param_frame_threshold = 17;
+int   param_frame_threshold = 23;
 float param_angle_factor = 1.f;
 float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
@@ -361,8 +358,6 @@ void display(void){
     if (param_mode == KINFU_FORWARD) {
     	if (file_index == param_start_index + param_frame_threshold ||
     			file_index == image_list.size()) {
-//            kfusion.Integrate();
-
             param_mode = KINFU_BACKWARD;
             file_index = param_start_index - 1;
             kfusion.setPose(toMatrix4(initPose));
@@ -386,7 +381,6 @@ void display(void){
     } else {
     	if (file_index == param_start_index - param_frame_threshold ||
     			file_index == -1) {
-//    		kfusion.Integrate();
     		kfusion.setPose(toMatrix4(initPose));
     		kfusion.Raycast();
     		cudaDeviceSynchronize();
@@ -414,9 +408,6 @@ void display(void){
     cout.flush();
 
     GetDepthData(depth_list[file_index], (uint16_t *)depthImage.data());
-
-    glClear( GL_COLOR_BUFFER_BIT );
-
     kfusion.setKinectDeviceDepth(depthImage.getDeviceImage());
 
 /*----------------------------------------------------------------------------*/
@@ -445,32 +436,32 @@ void display(void){
 
 #endif
 
+    pose_map.insert(make_pair(file_index, kfusion.pose));
+
     double z_angle;
     Vector<3, float> diff_t;
     diff_t[0] = diff_t[1] = diff_t[2] = 0.f;
 
     if (file_index != param_start_index) {
-    	float3 cam_z;
-    	cam_z.x = cam_z.y = 0.f;
-    	cam_z.z = 1.f;
-    	float3 wor_z = kfusion.pose * cam_z;
-    	z_angle = acos(wor_z.z);
+			float3 cam_z;
+			cam_z.x = cam_z.y = 0.f;
+			cam_z.z = 1.f;
+			float3 wor_z = kfusion.pose * cam_z;
+			z_angle = acos(wor_z.z);
 
-		float3 temp_t = kfusion.pose.get_translation();
-		Vector<3, float> curr_t;
-		curr_t[0] = temp_t.x;
-		curr_t[1] = temp_t.y;
-		curr_t[2] = temp_t.z;
-		Vector<3, float> init_t = initPose.get_translation();
-		diff_t = curr_t - init_t;
+			float3 temp_t = kfusion.pose.get_translation();
+			Vector<3, float> curr_t;
+			curr_t[0] = temp_t.x;
+			curr_t[1] = temp_t.y;
+			curr_t[2] = temp_t.z;
+			Vector<3, float> init_t = initPose.get_translation();
+			diff_t = curr_t - init_t;
     }
 
     if ((!integrate && file_index != param_start_index) ||
     		z_angle > angle_threshold * param_angle_factor ||
     		norm(diff_t) > translation_threshold * param_translation_factor ) {
     	if (param_mode == KINFU_FORWARD) {
-//				kfusion.Integrate();
-
 				param_mode = KINFU_BACKWARD;
 				file_index = param_start_index - 1;
 				kfusion.setPose(toMatrix4(initPose));
@@ -481,7 +472,6 @@ void display(void){
 				cout << "THR" << endl << endl;
 				return;
 			} else {
-//				kfusion.Integrate();
 				kfusion.setPose(toMatrix4(initPose));
 				kfusion.Raycast();
 				cudaDeviceSynchronize();
@@ -528,21 +518,16 @@ void display(void){
 			}
     }
 
-    pose_map.insert(make_pair(file_index, kfusion.pose));
-
     if (param_mode == KINFU_FORWARD)
     	++file_index;
     else
     	--file_index;
 /*----------------------------------------------------------------------------*/
 
-#ifndef FIRST_FRAME_ONLY
-    if(integrate || first_frame){
-#else
-    if(1){
-#endif
+    if(integrate || first_frame) {
         kfusion.Integrate();
         kfusion.Raycast();
+
         first_frame = false;
     }
 
@@ -683,7 +668,6 @@ int main(int argc, char ** argv) {
 #endif
 
     kfusion.setPose(toMatrix4(initPose));
-    pose_map.insert(make_pair(file_index, kfusion.pose));
 
     while(1) {
     	display();
