@@ -60,7 +60,7 @@ int   param_start_index = -1;
 int   param_volume_size = 640;
 float param_volume_dimension = 4.f;
 
-int   param_frame_threshold = 23;
+int   param_frame_threshold = 26;
 float param_angle_factor = 1.f;
 float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
@@ -459,6 +459,8 @@ void display(void){
     }
 
     if ((!integrate && file_index != param_start_index) ||
+//    		file_index == param_start_index + 14 ||
+//    		file_index == param_start_index - 14 ||
     		z_angle > angle_threshold * param_angle_factor ||
     		norm(diff_t) > translation_threshold * param_translation_factor ) {
     	if (param_mode == KINFU_FORWARD) {
