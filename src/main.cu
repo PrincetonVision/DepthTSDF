@@ -32,7 +32,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <dirent.h>
 #include <cerrno>
 #include <cmath>
-#include <map>
 
 #include <png++/png.hpp>
 #include <jpeglib.h>
@@ -44,6 +43,7 @@ KFusion kfusion;
 Image<uint16_t, HostDevice> depthImage;
 
 SE3<float> initPose;
+Matrix4 second_pose;
 
 float size;
 bool stop_run = false;
@@ -60,7 +60,7 @@ int   param_start_index = -1;
 int   param_volume_size = 640;
 float param_volume_dimension = 4.f;
 
-int   param_frame_threshold = 29;
+int   param_frame_threshold = 11;
 float param_angle_factor = 1.f;
 float param_translation_factor = 1.f;
 float param_rsme_threshold = 1.5e-2f;
@@ -89,11 +89,9 @@ vector<string> extrinsic_list;
 
 #ifdef INITIAL_POSE
 vector<Matrix4> extrinsic_poses;
-map<int, Matrix4> pose_map;
 #endif
 
-string image_dir, depth_dir, fused_dir, extrinsic_dir;
-string pose_dir, frame_dir;
+string data_dir, image_dir, depth_dir, fused_dir, extrinsic_dir;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -168,31 +166,19 @@ void SaveFusedDepthFile() {
 
 	img.write(fused_full_name.c_str());
 
-#ifdef INITIAL_POSE
-	string serial_txt = depth_serial_name.substr(0, param_file_name_length - 4) +
-			                ".txt";
-	string pose_txt_name  = pose_dir  + serial_txt;
-	string frame_txt_name = frame_dir + serial_txt;
-
-	FILE *fp_frame = fopen(frame_txt_name.c_str(), "w");
+	string pose_txt_name = data_dir + "poseTSDF.txt";
 	ofstream pose_file;
-	pose_file.open(pose_txt_name.c_str());
+	pose_file.open(pose_txt_name.c_str(), fstream::app);
 	pose_file.precision(60);
 
-	for (map<int, Matrix4>::iterator it = pose_map.begin(); it != pose_map.end();
-			++it) {
-		fprintf(fp_frame, "%d\n", it->first);
-		Matrix4 m = it->second;
-		for (int i = 0; i < 3; ++i) {
-			pose_file << m.data[i].x << "\t";
-			pose_file << m.data[i].y << "\t";
-			pose_file << m.data[i].z << "\t";
-			pose_file << m.data[i].w << "\n";
-		}
+	for (int i = 0; i < 3; ++i) {
+		pose_file << second_pose.data[i].x << "\t";
+		pose_file << second_pose.data[i].y << "\t";
+		pose_file << second_pose.data[i].z << "\t";
+		pose_file << second_pose.data[i].w << "\n";
 	}
-	fclose(fp_frame);
+
 	pose_file.close();
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -341,11 +327,7 @@ void ReComputeSecondPose() {
 		kfusion.Track();
 		cudaDeviceSynchronize();
 
-		map<int, Matrix4>::iterator itr = pose_map.find(param_start_index + 1);
-		if (itr != pose_map.end())
-			itr->second = kfusion.pose;
-		else
-			pose_map.insert(make_pair(param_start_index + 1, kfusion.pose));
+		second_pose = inverse(toMatrix4(initPose)) * kfusion.pose;
 	}
 }
 
@@ -435,8 +417,6 @@ void display(void){
     integrate = kfusion.Track();
 
 #endif
-
-    pose_map.insert(make_pair(file_index, kfusion.pose));
 
     double z_angle;
     Vector<3, float> diff_t;
@@ -548,7 +528,7 @@ int main(int argc, char ** argv) {
 
 	cout << "=================================================================" << endl;
 
-	string server_prefix, data_prefix, server_dir, data_dir, data_name;
+	string server_prefix, data_prefix, server_dir, data_name;
 
 	if (argc < 5) {
 		cout << "Wrong arguments ..." << endl;
@@ -579,9 +559,6 @@ int main(int argc, char ** argv) {
 	extrinsic_dir = server_dir + "extrinsics/";
 
 	data_dir = data_prefix + data_name;
-	pose_dir = data_dir + "poseTSDF/";
-	frame_dir = data_dir + "frameTSDF/";
-
 
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
@@ -590,8 +567,6 @@ int main(int argc, char ** argv) {
 #endif
 
   SystemCommand("mkdir -p " + fused_dir);
-  SystemCommand("mkdir -p " + pose_dir);
-  SystemCommand("mkdir -p " + frame_dir);
 
 	file_index = param_start_index;
 
@@ -603,8 +578,8 @@ int main(int argc, char ** argv) {
     AssignDepthList(image_list, &depth_list);
 
 #ifdef INITIAL_POSE
-//    string extrinsic_name = extrinsic_list[extrinsic_list.size() - 1];
-    string extrinsic_name = extrinsic_list[1];
+    string extrinsic_name = extrinsic_list[extrinsic_list.size() - 1];
+//    string extrinsic_name = extrinsic_list[1];
 
     GetExtrinsicData(extrinsic_name, &extrinsic_poses);
     cout << extrinsic_name << endl;
