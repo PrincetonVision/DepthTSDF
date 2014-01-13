@@ -403,7 +403,7 @@ void display(void){
 #endif
 
 
-#if 1
+#if 0
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
