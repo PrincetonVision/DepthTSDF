@@ -395,15 +395,15 @@ void display(void){
 /*----------------------------------------------------------------------------*/
 
 #if 0
-    // Just integrate and raycast first frame
-    kfusion.Integrate();
-    kfusion.Raycast();
-    SaveFusedDepthFile();
-    exit(0);
+//    // Just integrate and raycast first frame
+//    kfusion.Integrate();
+//    kfusion.Raycast();
+//    SaveFusedDepthFile();
+//    exit(0);
 #endif
 
 
-#if 0
+#if 1
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
@@ -439,8 +439,6 @@ void display(void){
     }
 
     if ((!integrate && file_index != param_start_index) ||
-//    		file_index == param_start_index + 14 ||
-//    		file_index == param_start_index - 14 ||
     		z_angle > angle_threshold * param_angle_factor ||
     		norm(diff_t) > translation_threshold * param_translation_factor ) {
     	if (param_mode == KINFU_FORWARD) {
@@ -470,31 +468,31 @@ void display(void){
 
 #if 0
 // volume saving
-				string vol_fn = fused_dir + "volume.txt";
-				FILE *fpv = fopen(vol_fn.c_str(), "w");
-
-				uint vol_size = kfusion.integration.size.x *
-						            kfusion.integration.size.y *
-						            kfusion.integration.size.z * sizeof(short2);
-
-				short2 *vol_data = (short2*) malloc(vol_size);
-				cudaMemcpy(vol_data, kfusion.integration.data, vol_size,
-						       cudaMemcpyDeviceToHost);
-
-				for (uint x = 0; x < kfusion.integration.size.x; ++x) {
-					cout << x << endl;
-					for (uint y = 0; y < kfusion.integration.size.y; ++y) {
-						for (uint z = 0; z < kfusion.integration.size.z; ++z) {
-							short2 data = vol_data[x +
-							    y * kfusion.integration.size.x +
-							    z * kfusion.integration.size.x * kfusion.integration.size.y];
-							float2 dw = make_float2(data.x * 0.00003051944088f, data.y);
-							fprintf(fpv, "%f %f ", dw.x, dw.y);
-						}
-					}
-				}
-
-				fclose(fpv);
+//				string vol_fn = fused_dir + "volume.txt";
+//				FILE *fpv = fopen(vol_fn.c_str(), "w");
+//
+//				uint vol_size = kfusion.integration.size.x *
+//						            kfusion.integration.size.y *
+//						            kfusion.integration.size.z * sizeof(short2);
+//
+//				short2 *vol_data = (short2*) malloc(vol_size);
+//				cudaMemcpy(vol_data, kfusion.integration.data, vol_size,
+//						       cudaMemcpyDeviceToHost);
+//
+//				for (uint x = 0; x < kfusion.integration.size.x; ++x) {
+//					cout << x << endl;
+//					for (uint y = 0; y < kfusion.integration.size.y; ++y) {
+//						for (uint z = 0; z < kfusion.integration.size.z; ++z) {
+//							short2 data = vol_data[x +
+//							    y * kfusion.integration.size.x +
+//							    z * kfusion.integration.size.x * kfusion.integration.size.y];
+//							float2 dw = make_float2(data.x * 0.00003051944088f, data.y);
+//							fprintf(fpv, "%f %f ", dw.x, dw.y);
+//						}
+//					}
+//				}
+//
+//				fclose(fpv);
 #endif
 				exit(0);
 			}
@@ -559,11 +557,10 @@ int main(int argc, char ** argv) {
 	extrinsic_dir = server_dir + "extrinsics/";
 
 	data_dir = data_prefix + data_name;
+	fused_dir = data_dir + "depthTSDF/";
 
 #ifdef RESOLUTION_1280X960
 	fused_dir = data_dir + "depth1280x960/";
-#else
-	fused_dir = data_dir + "depthTSDF/";
 #endif
 
   SystemCommand("mkdir -p " + fused_dir);
