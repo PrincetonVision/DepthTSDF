@@ -166,6 +166,7 @@ void SaveFusedDepthFile() {
 
 	img.write(fused_full_name.c_str());
 
+#if 0
 	string pose_txt_name = data_dir + "poseTSDF.txt";
 	ofstream pose_file;
 	pose_file.open(pose_txt_name.c_str(), fstream::app);
@@ -179,6 +180,7 @@ void SaveFusedDepthFile() {
 	}
 
 	pose_file.close();
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -363,11 +365,11 @@ void display(void){
     } else {
     	if (file_index == param_start_index - param_frame_threshold ||
     			file_index == -1) {
-    		kfusion.setPose(toMatrix4(initPose));
-    		kfusion.Raycast();
-    		cudaDeviceSynchronize();
-
-    		ReComputeSecondPose();
+//    		kfusion.setPose(toMatrix4(initPose));
+//    		kfusion.Raycast();
+//    		cudaDeviceSynchronize();
+//
+//    		ReComputeSecondPose();
 
     		kfusion.setPose(toMatrix4(initPose));
     		kfusion.Raycast();
@@ -403,7 +405,7 @@ void display(void){
 #endif
 
 
-#if 0
+#if 1
     // ICP off - actually on for integrate switch
     // extrinsic on
     Matrix4 temp = kfusion.pose;
@@ -452,11 +454,11 @@ void display(void){
 				cout << "THR" << endl << endl;
 				return;
 			} else {
-				kfusion.setPose(toMatrix4(initPose));
-				kfusion.Raycast();
-				cudaDeviceSynchronize();
-
-    		ReComputeSecondPose();
+//				kfusion.setPose(toMatrix4(initPose));
+//				kfusion.Raycast();
+//				cudaDeviceSynchronize();
+//
+//    		ReComputeSecondPose();
 
     		kfusion.setPose(toMatrix4(initPose));
     		kfusion.Raycast();
